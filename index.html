@@ -26,7 +26,7 @@
         <div class="hero-copy">
           <p class="eyebrow">GPT Image 2 · 运营海报生成</p>
           <h1>聚合 KV 一键生成小工具，只需要跟着我填写</h1>
-          <p class="intro">按顺序补全运营信息，上传产品六面图，即可生成一张 3:4 商业 KV。</p>
+          <p class="intro">按顺序补全运营信息，可上传产品六面图，也可直接使用内置参考图生成 3:4 商业 KV。</p>
         </div>
       </section>
 
@@ -100,7 +100,8 @@
               <label class="field compact-field">
                 <span class="field-label">模型</span>
                 <select name="model">
-                  <option value="gpt-image-2-1K" selected>gpt-image-2-1K</option>
+                  <option value="gpt-image-2-1K" selected>gpt-image-2-1K · 约 2K 效果</option>
+                  <option value="gpt-image-2-4K">gpt-image-2-4K · 超高清</option>
                   <option value="gpt-image-1.5">gpt-image-1.5</option>
                   <option value="gpt-image-1">gpt-image-1</option>
                   <option value="gpt-image-1-mini">gpt-image-1-mini</option>
@@ -110,9 +111,9 @@
               <label class="field compact-field">
                 <span class="field-label">尺寸</span>
                 <select name="size">
-                  <option value="auto" selected>auto</option>
+                  <option value="auto">auto</option>
                   <option value="1024x1024">1024x1024 · 1K</option>
-                  <option value="1024x1536">1024x1536 · 竖版</option>
+                  <option value="1024x1536" selected>1024x1536 · 竖版高清</option>
                   <option value="1536x1024">1536x1024 · 横版</option>
                 </select>
                 <small>自动即可</small>
@@ -148,10 +149,10 @@
 
           <div class="upload-grid">
             <label class="drop-zone">
-              <input id="productImage" type="file" accept="image/png,image/jpeg,image/webp" required />
+              <input id="productImage" type="file" accept="image/png,image/jpeg,image/webp" />
               <span class="upload-copy">
                 <strong>上传产品六面图</strong>
-                <span>用于控制产品之间的比例，如果有多个产品就在白底图上放置多个</span>
+                <span>不上传则使用内置参考图；上传后以你的图为准</span>
               </span>
               <span class="example-preview">
                 <span>示例缩略图</span>
@@ -180,7 +181,7 @@
           <div class="result-frame">
             <div id="emptyState" class="empty-state">
               <strong>等待生成</strong>
-              <span>上传产品图并点击“生成 KV”后，图片会出现在这里。</span>
+              <span>可直接生成，也可上传产品图后生成。</span>
             </div>
             <img id="resultImage" alt="生成的运营聚合 KV" />
           </div>

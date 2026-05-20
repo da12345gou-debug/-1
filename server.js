@@ -13,6 +13,7 @@ const preferredPublicDir = path.join(__dirname, "public");
 const publicDir = existsSync(path.join(preferredPublicDir, "index.html")) ? preferredPublicDir : __dirname;
 const outputDir = path.join(__dirname, "outputs");
 const defaultRobotPath = path.join(publicDir, "assets", "robot-reference.png");
+const defaultProductPath = path.join(publicDir, "assets", "product-example.png");
 const port = Number(process.env.PORT || 4173);
 const maxBodyBytes = 36 * 1024 * 1024;
 let accessPassword = "";
@@ -134,13 +135,13 @@ function buildPrompt(fields) {
   return `一张极具视觉冲击力的3D商业广告海报，比例3:4，大师级的3d渲染，材质清晰明确，整体光线柔和明亮，具有C4D和Blender渲染的顶级质感，色彩高饱和度，活泼、科技、年轻化，8k分辨率，极致细节。产品和标题突出：产品组合位于画面中心偏下，标题位于画面正中偏上。环境简洁，环境完全不抢，突出主体。产品是画面当之无愧的中心和焦点。整体冷暖和谐。画面采用「${fields.mainTone}」作为主色调背景。请根据「${fields.environmentScene}」自动联想并扩写合适的环境氛围，让画面情绪自然、具体、有季节感。
 
 构图上：
-产品组合位于画面中心偏下，多个不同高度的圆润阶梯展台错落排布，上面精致地展示着上传产品六面图中的全部智能家居电子产品。请自动识别产品六面图中的产品数量，并在海报中完整呈现对应数量的产品。请严格参考上传的产品六面图：保持产品造型、大小比例和数量逻辑，调整产品透视和环境光，使其自然融入新场景。该参考图用于控制产品之间的比例；如果有多个产品，会在白底图上放置多个。最高的产品位于中央，其他产品在两侧，产品之间互不遮挡，上下前后高低错落，像电商商品陈列一样精致合理。除了墨镜产品之外，其他产品都要落地。所有产品外观严格参考产品六面图。
+产品组合位于画面中心偏下，圆润阶梯展台错落排布。请先严格识别上传产品六面图中的独立产品数量，并只呈现相同数量的产品：如果参考图中只有 1 个产品，海报中只能出现 1 个产品主体，禁止额外添加音箱、摄像头、屏幕、闹钟或任何其他智能家居产品；如果参考图中有多个产品，才可以完整呈现对应数量的多个产品。请严格参考上传的产品六面图：保持产品造型、大小比例和数量逻辑，调整产品透视和环境光，使其自然融入新场景。该参考图用于控制产品之间的比例；如果有多个产品，会在白底图上放置多个。最高的产品位于中央，其他产品在两侧，产品之间互不遮挡，上下前后高低错落，像电商商品陈列一样精致合理。除了墨镜产品之外，其他产品都要落地。所有产品外观严格参考产品六面图，不要凭空生成参考图之外的新产品。
 
 标题位于画面正中偏上。主标题文字为「${fields.mainTitle}」，几个大字，字体为「手写」风格，艺术字设计。副标题文字为「${fields.subTitle}」，位于主标题下方，带有简约飘带或托底结构，与主标题组合和谐。标题颜色为「${fields.titleColor}」，文字颜色需要简洁突出、清晰可读，如果背景深色则使用浅色标题，如果背景浅色则使用深色标题。
 
 环境为简约的「${fields.environmentScene}」，细节精致但完全不抢主体，背景为简单渐变色，保证标题突出。整体青春活泼。空中漂浮着粉色的简约小「${fields.floatingElement}」，颜色和谐，体现空间感和镜头感，有一定视觉冲击力。
 
-画面中加入一个小度机器人吉祥物，严格参考内置机器人参考图：机器人无手指、无腿、呈悬浮状态。该角色身着符合环境特色的服装，生动俏皮，但不要抢占产品主体。`;
+画面中加入一个小度机器人吉祥物，严格参考内置机器人参考图。保持机器人角色完全不变，不要改造它的身体比例、脸部屏幕、眼睛形态、材质和轮廓；注意它无手、无脚、无腿，没有手指，呈现悬浮状态。该角色可以身着符合环境特色的轻量服饰，但服饰不能改变机器人本体结构，整体生动俏皮，不要抢占产品主体。`;
 }
 
 async function fetchOpenAI(url, options, attempts = 3) {
@@ -165,18 +166,23 @@ async function handleGenerate(req, res) {
     const apiKey = String(body.apiKey || process.env.OPENAI_API_KEY || "").trim();
     if (!apiKey) return sendJson(res, 400, { error: "请填写 OpenAI API Key，或让服务端配置 OPENAI_API_KEY。" });
     const apiBaseUrl = normalizeBaseUrl(body.apiBaseUrl);
-    if (!body.productImage) return sendJson(res, 400, { error: "请上传产品六面图。" });
+    if (!body.productImage && !existsSync(defaultProductPath)) {
+      return sendJson(res, 400, { error: "请上传产品六面图，或补齐内置产品参考图。" });
+    }
+    if (!existsSync(defaultRobotPath)) {
+      return sendJson(res, 500, { error: "内置机器人参考图缺失，请补齐 assets/robot-reference.png。" });
+    }
 
     const prompt = buildPrompt(body.fields || {});
     const model = body.model || process.env.OPENAI_IMAGE_MODEL || "gpt-image-2-1K";
-    const size = body.size || "auto";
+    const size = body.size || "1024x1536";
     const quality = body.quality || "medium";
     const outputFormat = body.outputFormat || "png";
     const form = new FormData();
-    const product = dataUrlToBlob(body.productImage, "product-reference");
-    const robot = existsSync(defaultRobotPath)
-      ? await fileToBlob(defaultRobotPath, "image/png", "robot-reference.png")
-      : null;
+    const product = body.productImage
+      ? dataUrlToBlob(body.productImage, "product-reference")
+      : await fileToBlob(defaultProductPath, "image/png", "product-reference.png");
+    const robot = await fileToBlob(defaultRobotPath, "image/png", "robot-reference.png");
 
     form.append("model", model);
     form.append("prompt", prompt);
@@ -184,7 +190,7 @@ async function handleGenerate(req, res) {
     form.append("quality", quality);
     form.append("output_format", outputFormat);
     form.append("image[]", product.blob, product.filename);
-    if (robot) form.append("image[]", robot.blob, robot.filename);
+    form.append("image[]", robot.blob, robot.filename);
 
     const upstream = await fetchOpenAI(`${apiBaseUrl}/images/edits`, {
       method: "POST",

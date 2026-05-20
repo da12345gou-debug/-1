@@ -100,14 +100,14 @@ textarea {
 }
 
 .app-shell {
-  width: min(1280px, calc(100vw - 56px));
+  width: min(1440px, calc(100vw - 36px));
   margin: 0 auto;
-  padding: 40px 0 56px;
+  padding: 18px 0 28px;
 }
 
 .hero {
   display: block;
-  padding: 26px 0 30px;
+  padding: 10px 0 14px;
 }
 
 .hero-copy {
@@ -132,29 +132,29 @@ h2 {
 
 h1 {
   max-width: 980px;
-  font-size: clamp(34px, 3.55vw, 54px);
-  line-height: 1.08;
+  font-size: clamp(26px, 2.45vw, 38px);
+  line-height: 1.12;
   font-weight: 650;
 }
 
 h2 {
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1.25;
   font-weight: 650;
 }
 
 .intro {
   max-width: 700px;
-  margin: 20px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.02fr) minmax(390px, 0.98fr);
-  gap: 24px;
+  grid-template-columns: minmax(620px, 1.08fr) minmax(330px, 0.72fr);
+  gap: 16px;
   align-items: start;
 }
 
@@ -169,15 +169,15 @@ h2 {
 
 .form-panel,
 .preview-panel {
-  padding: 30px;
+  padding: 18px;
 }
 
 .section-head {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .preview-head {
@@ -185,7 +185,7 @@ h2 {
 }
 
 .upload-head {
-  margin-top: 26px;
+  margin-top: 14px;
 }
 
 .step-badge {
@@ -203,7 +203,7 @@ h2 {
 .advanced,
 .upload-grid {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .field-grid {
@@ -216,7 +216,7 @@ h2 {
 
 .field {
   display: grid;
-  gap: 7px;
+  gap: 5px;
   min-width: 0;
 }
 
@@ -252,6 +252,21 @@ h2 {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
+@media (min-width: 761px) {
+  .muted-api-field.field-wide {
+    grid-column: auto;
+  }
+
+  .eyebrow,
+  .section-label {
+    margin-bottom: 4px;
+  }
+
+  .field small {
+    line-height: 1.25;
+  }
+}
+
 input,
 select,
 textarea {
@@ -266,8 +281,8 @@ textarea {
 
 input,
 select {
-  min-height: 40px;
-  padding: 0 12px;
+  min-height: 34px;
+  padding: 0 10px;
 }
 
 textarea {
@@ -289,7 +304,7 @@ textarea:focus {
 }
 
 .advanced-box {
-  margin-top: 18px;
+  margin-top: 12px;
   border: 1px solid rgba(255, 255, 255, 0.055);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
@@ -305,7 +320,7 @@ textarea:focus {
 }
 
 .advanced-box summary {
-  min-height: 44px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   padding: 0 14px;
@@ -317,11 +332,7 @@ textarea:focus {
 
 .advanced {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 0 14px 14px;
-}
-
-.compact-field small {
-  min-height: 38px;
+  padding: 0 12px 12px;
 }
 
 .upload-grid {
@@ -329,7 +340,7 @@ textarea:focus {
 }
 
 .drop-zone {
-  min-height: 236px;
+  min-height: 128px;
   border-radius: 8px;
   background: var(--surface-soft);
 }
@@ -337,10 +348,10 @@ textarea:focus {
 .drop-zone {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 12px;
   align-items: center;
-  padding: 18px;
+  padding: 12px;
   border: 1px dashed rgba(255, 210, 161, 0.24);
   overflow: hidden;
   cursor: pointer;
@@ -385,8 +396,8 @@ textarea:focus {
 }
 
 .example-preview img {
-  width: 180px;
-  height: 126px;
+  width: 130px;
+  height: 88px;
   display: block;
   object-fit: contain;
   border: 1px solid var(--line);
@@ -399,9 +410,9 @@ textarea:focus {
   display: none;
   grid-column: 1 / -1;
   width: 100%;
-  max-height: 150px;
+  max-height: 96px;
   object-fit: contain;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .drop-zone.has-image {
@@ -420,7 +431,7 @@ textarea:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 24px;
+  margin-top: 14px;
 }
 
 .primary-button,
@@ -441,7 +452,7 @@ textarea:focus {
 .primary-button {
   position: relative;
   min-width: 220px;
-  min-height: 58px;
+  min-height: 52px;
   border: 1px solid rgba(255, 195, 120, 0.42);
   border-radius: 14px;
   background:
@@ -493,7 +504,7 @@ textarea:focus {
 
 .message {
   min-height: 22px;
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
@@ -509,11 +520,16 @@ textarea:focus {
 
 .preview-panel {
   position: sticky;
-  top: 20px;
+  top: 14px;
 }
 
 .result-frame {
+  width: auto;
+  max-width: 100%;
+  height: min(62vh, 560px);
+  min-height: 360px;
   aspect-ratio: 3 / 4;
+  margin: 0 auto;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -641,6 +657,10 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .field-wide {
+    grid-column: 1 / -1;
+  }
+
   .drop-zone {
     min-height: 260px;
     padding: 16px;
@@ -675,6 +695,8 @@ textarea:focus {
   }
 
   .result-frame {
+    width: 100%;
+    height: auto;
     min-height: 380px;
   }
 }
