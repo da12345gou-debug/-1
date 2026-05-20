@@ -1,39 +1,193 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Arix Signature Christmas Tree</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: radial-gradient(circle at center, #0a1f16 0%, #000000 100%);
-        font-family: 'Playfair Display', serif;
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7",
-    "three": "https://esm.sh/three@^0.182.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.4.2",
-    "@react-three/postprocessing": "https://esm.sh/@react-three/postprocessing@^3.0.4",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
+    <title>聚合 KV 一键生成小工具</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
   <body>
-    <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <section id="lockScreen" class="lock-screen" hidden>
+      <form id="unlockForm" class="lock-panel">
+        <p class="eyebrow">Private Access</p>
+        <h2>请输入访问密码</h2>
+        <p>这是内部测试链接，验证后即可使用聚合 KV 生成工具。</p>
+        <label class="field">
+          <span class="field-label">访问密码</span>
+          <input id="accessPassword" type="password" autocomplete="current-password" />
+        </label>
+        <button class="primary-button" type="submit">进入工具</button>
+        <p id="unlockMessage" class="message"></p>
+      </form>
+    </section>
+
+    <main class="app-shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">GPT Image 2 · 运营海报生成</p>
+          <h1>聚合 KV 一键生成小工具，只需要跟着我填写</h1>
+          <p class="intro">按顺序补全运营信息，上传产品六面图，即可生成一张 3:4 商业 KV。</p>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <form id="posterForm" class="panel form-panel">
+          <div class="section-head">
+            <div class="step-badge">1</div>
+            <div>
+              <p class="section-label">填写运营变量</p>
+              <h2>先把画面方向说清楚</h2>
+            </div>
+            <div class="preset-actions" aria-label="示例预设">
+              <button class="secondary-button" type="button" data-preset="spring">填入春日示例</button>
+              <button class="secondary-button" type="button" data-preset="summer">填入夏日示例</button>
+              <button class="secondary-button" type="button" data-preset="christmas">填入圣诞示例</button>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span class="field-label">主色调</span>
+              <input name="mainTone" required value="嫩绿色" />
+              <small>背景主色</small>
+            </label>
+
+            <label class="field">
+              <span class="field-label">标题颜色</span>
+              <input name="titleColor" required value="白色点缀黄色" />
+              <small>标题用色</small>
+            </label>
+
+            <label class="field">
+              <span class="field-label">环境场景</span>
+              <input name="environmentScene" required value="春日旷野露营环境" />
+              <small>背景场景</small>
+            </label>
+
+            <label class="field">
+              <span class="field-label">悬浮元素</span>
+              <input name="floatingElement" required value="花瓣" />
+              <small>金币、红包、花瓣</small>
+            </label>
+
+            <label class="field">
+              <span class="field-label">主标题</span>
+              <input name="mainTitle" required value="春夏换新季" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">副标题</span>
+              <input name="subTitle" required value="小度家用智能好物分享" />
+            </label>
+
+            <label class="field field-wide muted-api-field">
+              <span class="field-label">OpenAI API Key</span>
+              <input name="apiKey" type="password" autocomplete="off" placeholder="可不填，默认使用服务端 Key" />
+              <small>仅本次使用</small>
+            </label>
+
+            <label class="field field-wide muted-api-field">
+              <span class="field-label">API 接口地址</span>
+              <input name="apiBaseUrl" autocomplete="off" placeholder="默认官方 OpenAI；第三方请填 Base URL" />
+              <small>第三方必填</small>
+            </label>
+
+          </div>
+
+          <details class="advanced-box">
+            <summary>高级设置</summary>
+            <div class="advanced">
+              <label class="field compact-field">
+                <span class="field-label">模型</span>
+                <select name="model">
+                  <option value="gpt-image-2-1K" selected>gpt-image-2-1K</option>
+                  <option value="gpt-image-1.5">gpt-image-1.5</option>
+                  <option value="gpt-image-1">gpt-image-1</option>
+                  <option value="gpt-image-1-mini">gpt-image-1-mini</option>
+                </select>
+                <small>默认即可</small>
+              </label>
+              <label class="field compact-field">
+                <span class="field-label">尺寸</span>
+                <select name="size">
+                  <option value="auto" selected>auto</option>
+                  <option value="1024x1024">1024x1024 · 1K</option>
+                  <option value="1024x1536">1024x1536 · 竖版</option>
+                  <option value="1536x1024">1536x1024 · 横版</option>
+                </select>
+                <small>自动即可</small>
+              </label>
+              <label class="field compact-field">
+                <span class="field-label">质量</span>
+                <select name="quality">
+                  <option value="medium" selected>medium</option>
+                  <option value="high">high</option>
+                  <option value="low">low</option>
+                </select>
+                <small>越高越细</small>
+              </label>
+              <label class="field compact-field">
+                <span class="field-label">格式</span>
+                <select name="outputFormat">
+                  <option value="png" selected>png</option>
+                  <option value="webp">webp</option>
+                  <option value="jpeg">jpeg</option>
+                </select>
+                <small>默认 png</small>
+              </label>
+            </div>
+          </details>
+
+          <div class="section-head upload-head">
+            <div class="step-badge">2</div>
+            <div>
+              <p class="section-label">上传参考图</p>
+              <h2>上传产品六面图</h2>
+            </div>
+          </div>
+
+          <div class="upload-grid">
+            <label class="drop-zone">
+              <input id="productImage" type="file" accept="image/png,image/jpeg,image/webp" required />
+              <span class="upload-copy">
+                <strong>上传产品六面图</strong>
+                <span>用于控制产品之间的比例，如果有多个产品就在白底图上放置多个</span>
+              </span>
+              <span class="example-preview">
+                <span>示例缩略图</span>
+                <img src="/assets/product-example.png" alt="产品六面图示例" />
+              </span>
+              <img id="productPreview" alt="" />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="primary-button" type="submit">
+              <span id="buttonText">生成 KV</span>
+            </button>
+          </div>
+          <p id="message" class="message"></p>
+        </form>
+
+        <aside class="panel preview-panel">
+          <div class="section-head preview-head">
+            <div>
+              <p class="section-label">结果预览</p>
+              <h2>生成后在这里查看</h2>
+            </div>
+            <a id="downloadLink" class="download-link" hidden target="_blank" rel="noreferrer">打开图片</a>
+          </div>
+          <div class="result-frame">
+            <div id="emptyState" class="empty-state">
+              <strong>等待生成</strong>
+              <span>上传产品图并点击“生成 KV”后，图片会出现在这里。</span>
+            </div>
+            <img id="resultImage" alt="生成的运营聚合 KV" />
+          </div>
+          <textarea id="promptPreview" readonly hidden></textarea>
+        </aside>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
 </html>
