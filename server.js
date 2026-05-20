@@ -9,7 +9,8 @@ import dns from "node:dns";
 dns.setDefaultResultOrder("ipv4first");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicDir = path.join(__dirname, "public");
+const preferredPublicDir = path.join(__dirname, "public");
+const publicDir = existsSync(path.join(preferredPublicDir, "index.html")) ? preferredPublicDir : __dirname;
 const outputDir = path.join(__dirname, "outputs");
 const defaultRobotPath = path.join(publicDir, "assets", "robot-reference.png");
 const port = Number(process.env.PORT || 4173);
@@ -173,7 +174,9 @@ async function handleGenerate(req, res) {
     const outputFormat = body.outputFormat || "png";
     const form = new FormData();
     const product = dataUrlToBlob(body.productImage, "product-reference");
-    const robot = await fileToBlob(defaultRobotPath, "image/png", "robot-reference.png");
+    const robot = existsSync(defaultRobotPath)
+      ? await fileToBlob(defaultRobotPath, "image/png", "robot-reference.png")
+      : null;
 
     form.append("model", model);
     form.append("prompt", prompt);
@@ -181,7 +184,7 @@ async function handleGenerate(req, res) {
     form.append("quality", quality);
     form.append("output_format", outputFormat);
     form.append("image[]", product.blob, product.filename);
-    form.append("image[]", robot.blob, robot.filename);
+    if (robot) form.append("image[]", robot.blob, robot.filename);
 
     const upstream = await fetchOpenAI(`${apiBaseUrl}/images/edits`, {
       method: "POST",
