@@ -1,0 +1,8 @@
+.env
+node_modules/
+outputs/
+uploads/
+tools/
+server.log
+server.err.log
+.DS_Store

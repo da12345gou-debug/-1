@@ -1,0 +1,9 @@
+.git
+.env
+outputs
+uploads
+tools
+server.log
+server.err.log
+node_modules
+npm-debug.log

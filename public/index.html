@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>落地页一键生成</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <section id="lockScreen" class="lock-screen" hidden>
+      <form id="unlockForm" class="lock-panel">
+        <p class="eyebrow">Private Access</p>
+        <h2>谁最帅？</h2>
+        <p>答对后即可进入落地页一键生成工具。</p>
+        <label class="field">
+          <span class="field-label">答案</span>
+          <input id="accessPassword" type="password" autocomplete="current-password" />
+        </label>
+        <button class="primary-button" type="submit">进入工具</button>
+        <p id="unlockMessage" class="message"></p>
+      </form>
+    </section>
+
+    <main class="app-shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="tool-crumb" aria-label="项目位置">
+            <span class="folder-icon" aria-hidden="true"></span>
+            <span>落地页一键延展傻瓜工具</span>
+          </div>
+          <p class="eyebrow">GPT Image 2 · 移动端长页设计</p>
+          <h1>私域落地页一键延展工具</h1>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <form id="posterForm" class="panel form-panel">
+          <div class="section-head">
+            <div class="step-badge">1</div>
+            <div>
+              <p class="section-label">填空变量</p>
+              <h2>只改这两处</h2>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span class="field-label">页面色调</span>
+              <input name="tone" required value="绿" placeholder="例：绿" />
+            </label>
+
+            <label class="field field-wide">
+              <span class="field-label">视觉氛围</span>
+              <input name="mood" required value="春日露营" placeholder="例：春日露营" />
+            </label>
+
+            <label class="field muted-api-field">
+              <span class="field-label">OpenAI API Key</span>
+              <input name="apiKey" type="password" autocomplete="off" placeholder="可不填，默认使用服务端 Key" />
+              <small>仅本次使用</small>
+            </label>
+
+            <label class="field muted-api-field">
+              <span class="field-label">API 接口地址</span>
+              <input name="apiBaseUrl" autocomplete="off" placeholder="默认官方 OpenAI；第三方请填 Base URL" />
+              <small>与旧工具一致</small>
+            </label>
+          </div>
+
+          <details class="advanced-box">
+            <summary>高级设置</summary>
+            <div class="advanced">
+              <label class="field compact-field">
+                <span class="field-label">模型</span>
+                <select name="model">
+                  <option value="gpt-image-2-1K" selected>gpt-image-2-1K · 约 2K 效果</option>
+                  <option value="gpt-image-2-4K">gpt-image-2-4K · 超高清</option>
+                  <option value="gpt-image-1.5">gpt-image-1.5</option>
+                  <option value="gpt-image-1">gpt-image-1</option>
+                  <option value="gpt-image-1-mini">gpt-image-1-mini</option>
+                </select>
+                <small>默认即可</small>
+              </label>
+              <label class="field compact-field">
+                <span class="field-label">尺寸</span>
+                <select name="size">
+                  <option value="auto">auto</option>
+                  <option value="1024x1024">1024x1024 · 方图</option>
+                  <option value="1024x1536" selected>1024x1536 · 竖版高清</option>
+                  <option value="1536x1024">1536x1024 · 横版</option>
+                </select>
+                <small>分段时建议竖版</small>
+              </label>
+              <label class="field compact-field">
+                <span class="field-label">质量</span>
+                <select name="quality">
+                  <option value="medium" selected>medium</option>
+                  <option value="high">high</option>
+                  <option value="low">low</option>
+                </select>
+                <small>越高越细</small>
+              </label>
+              <label class="field compact-field">
+                <span class="field-label">格式</span>
+                <select name="outputFormat">
+                  <option value="png" selected>png</option>
+                  <option value="webp">webp</option>
+                  <option value="jpeg">jpeg</option>
+                </select>
+                <small>默认 png</small>
+              </label>
+              <label class="field compact-field">
+                <span class="field-label">长图策略</span>
+                <select name="segmentMode">
+                  <option value="auto" selected>自动分段</option>
+                  <option value="single">单张生成</option>
+                  <option value="manual">手动段数</option>
+                </select>
+                <small>长原型不要压缩</small>
+              </label>
+              <label class="field compact-field">
+                <span class="field-label">手动段数</span>
+                <input name="segmentCount" type="number" min="1" max="10" value="2" />
+                <small>仅手动时生效</small>
+              </label>
+            </div>
+          </details>
+
+          <div class="section-head upload-head">
+            <div class="step-badge">2</div>
+            <div>
+              <p class="section-label">上传参考图</p>
+              <h2>原型和顶部头图</h2>
+            </div>
+          </div>
+
+          <div class="upload-grid">
+            <label class="drop-zone">
+              <input id="prototypeImage" type="file" accept="image/png,image/jpeg,image/webp" />
+              <span class="upload-copy">
+                <strong>落地页原型图</strong>
+                <span>不上传则使用内置 5.png；文字和信息以这张原型为准。</span>
+              </span>
+              <span class="example-preview">
+                <span>内置原型</span>
+                <img src="/assets/prototype-default.png" alt="内置落地页原型" />
+              </span>
+              <img id="prototypePreview" alt="" />
+            </label>
+
+            <label class="drop-zone">
+              <input id="heroImage" type="file" accept="image/png,image/jpeg,image/webp" />
+              <span class="upload-copy">
+                <strong>顶部头图</strong>
+                <span>不上传则使用内置 6.png；该图不交给模型重绘，结果中会原图直拼到最上方。</span>
+              </span>
+              <span class="example-preview">
+                <span>内置头图</span>
+                <img src="/assets/hero-default.png" alt="内置顶部头图" />
+              </span>
+              <img id="heroPreview" alt="" />
+            </label>
+
+            <label class="drop-zone hidden-field">
+              <input id="robotReferenceImages" type="file" accept="image/png,image/jpeg,image/webp" multiple />
+              <span class="upload-copy">
+                <strong>机器人造型参考图</strong>
+                <span>可多选；不上传则使用内置机器人参考图，只用于锁定小机器人造型。</span>
+              </span>
+              <span class="example-preview">
+                <span>内置机器人参考</span>
+                <img src="/assets/robot-ref-1.png" alt="内置机器人造型参考" />
+              </span>
+              <img id="robotReferencePreview" alt="" />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="primary-button" type="submit">
+              <span id="buttonText">生成落地页</span>
+            </button>
+          </div>
+          <p id="message" class="message"></p>
+        </form>
+
+        <aside class="panel preview-panel">
+          <div class="section-head preview-head">
+            <div>
+              <p class="section-label">结果预览</p>
+              <h2>生成后在这里查看</h2>
+            </div>
+          </div>
+          <div id="resultList" class="result-list">
+            <div id="emptyState" class="empty-state">
+              <strong>等待生成</strong>
+              <span>提示词在后台隐藏；这里仅展示结果图和下载入口。</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <script src="/app.js?v=20260527-upload-refs"></script>
+  </body>
+</html>
