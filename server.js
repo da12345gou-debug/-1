@@ -371,6 +371,20 @@ function isGatewayTimeoutError(status, result) {
     message.includes("504");
 }
 
+function isTransientImageApiError(status, result) {
+  const message = String(result?.error?.message || result?.error || "").toLowerCase();
+  const type = String(result?.error?.type || result?.error?.code || "").toLowerCase();
+  return isGatewayTimeoutError(status, result) ||
+    [408, 409, 425, 429, 500, 502, 503, 504].includes(Number(status)) ||
+    message.includes("excessive system load") ||
+    message.includes("system load") ||
+    message.includes("server overloaded") ||
+    message.includes("temporarily unavailable") ||
+    message.includes("please try again") ||
+    type.includes("overload") ||
+    type.includes("rate_limit");
+}
+
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -527,13 +541,13 @@ async function runGenerateJob(body, onProgress = () => {}) {
         preferBase64: true
       }));
     }
-    for (let retry = 1; !upstream.ok && isGatewayTimeoutError(upstream.status, result) && retry <= 2; retry += 1) {
+    for (let retry = 1; !upstream.ok && isTransientImageApiError(upstream.status, result) && retry <= 3; retry += 1) {
       onProgress(
         segmentIndex,
         segmentCount,
         `第 ${segmentIndex + 1}/${segmentCount} 段图片接口超时，正在自动重试 ${retry}/2。`
       );
-      await delay(2500 * retry);
+      await delay(3500 * retry);
       ({ upstream, result } = await requestImageEdit({
         apiBaseUrl,
         apiKey,
@@ -551,7 +565,7 @@ async function runGenerateJob(body, onProgress = () => {}) {
     }
     if (!upstream.ok) {
       throw makeHttpError(upstream.status, {
-        error: isGatewayTimeoutError(upstream.status, result)
+        error: isTransientImageApiError(upstream.status, result)
           ? "图片接口网关超时，已自动重试但仍失败。请稍后再试，或改用更稳定的官方 OpenAI Base URL。"
           : result?.error?.message || "OpenAI 图片生成失败。",
         raw: result
