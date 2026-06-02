@@ -376,11 +376,19 @@ function appendResultCard({ titleText, image, downloadUrl, note }) {
   card.className = "result-card";
   const title = document.createElement("div");
   title.className = "result-title";
-  title.innerHTML = `<strong>${titleText}</strong>${downloadUrl ? `<a href="${downloadUrl}" target="_blank" rel="noreferrer">打开图片</a>` : ""}`;
+  title.innerHTML = `<strong>${titleText}</strong>`;
   const img = document.createElement("img");
   img.src = image;
   img.alt = titleText;
   card.append(title, img);
+  if (downloadUrl) {
+    const downloadLink = document.createElement("a");
+    downloadLink.href = downloadUrl;
+    downloadLink.download = `${titleText.replace(/[^\u4e00-\u9fa5\w-]+/g, "-") || "landing-page"}.png`;
+    downloadLink.className = "download-button";
+    downloadLink.textContent = "下载图片";
+    title.append(downloadLink);
+  }
   if (note) {
     const text = document.createElement("p");
     text.className = "result-note";

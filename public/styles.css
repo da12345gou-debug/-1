@@ -561,6 +561,14 @@ select:focus {
   text-decoration: none;
 }
 
+.result-title .download-button {
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--brand);
+  background: rgba(255, 255, 255, 0.72);
+}
+
 .result-note {
   margin: -2px 0 0;
   color: var(--muted);
