@@ -755,10 +755,14 @@ async function serveStatic(req, res) {
   try {
     const data = await readFile(filePath);
     const extension = path.extname(filePath).toLowerCase();
-    res.writeHead(200, {
+    const headers = {
       "Content-Type": mimeTypes[extension] || "application/octet-stream",
       "Cache-Control": [".html", ".js", ".css"].includes(extension) ? "no-store" : "public, max-age=300"
-    });
+    };
+    if (pathname.startsWith("/outputs/")) {
+      headers["Content-Disposition"] = `attachment; filename="${path.basename(filePath)}"`;
+    }
+    res.writeHead(200, headers);
     res.end(data);
   } catch {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });

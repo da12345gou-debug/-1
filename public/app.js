@@ -371,6 +371,32 @@ function drawImageWithTopFade(ctx, image, x, y, width, height, fadeHeight, sourc
   ctx.restore();
 }
 
+function createDownloadName(titleText, downloadUrl) {
+  const cleanTitle = titleText.replace(/[^\u4e00-\u9fa5\w-]+/g, "-") || "landing-page";
+  const mimeMatch = /^data:image\/([^;]+)/.exec(downloadUrl || "");
+  if (mimeMatch) return `${cleanTitle}.${mimeMatch[1].replace("jpeg", "jpg")}`;
+  const pathMatch = /\.([a-z0-9]+)(?:$|[?#])/i.exec(downloadUrl || "");
+  return `${cleanTitle}.${pathMatch?.[1] || "png"}`;
+}
+
+async function downloadImage(downloadUrl, filename) {
+  try {
+    const response = await fetch(downloadUrl);
+    if (!response.ok) throw new Error("download failed");
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  } catch {
+    window.open(downloadUrl, "_blank", "noreferrer");
+  }
+}
+
 function appendResultCard({ titleText, image, downloadUrl, note }) {
   const card = document.createElement("article");
   card.className = "result-card";
@@ -384,9 +410,13 @@ function appendResultCard({ titleText, image, downloadUrl, note }) {
   if (downloadUrl) {
     const downloadLink = document.createElement("a");
     downloadLink.href = downloadUrl;
-    downloadLink.download = `${titleText.replace(/[^\u4e00-\u9fa5\w-]+/g, "-") || "landing-page"}.png`;
+    downloadLink.download = createDownloadName(titleText, downloadUrl);
     downloadLink.className = "download-button";
     downloadLink.textContent = "下载图片";
+    downloadLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      downloadImage(downloadUrl, downloadLink.download);
+    });
     title.append(downloadLink);
   }
   if (note) {
