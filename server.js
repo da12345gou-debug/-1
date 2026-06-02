@@ -29,7 +29,7 @@ const defaultRobotRefPaths = [
 ];
 
 let accessPassword = "";
-let dailyLimit = 20;
+let dailyLimit = 30;
 const sessions = new Map();
 const usageBySession = new Map();
 const generationJobs = new Map();
@@ -37,7 +37,7 @@ const uploadedImages = new Map();
 
 await loadDotEnv();
 accessPassword = String(process.env.ACCESS_PASSWORD || "").trim();
-dailyLimit = Number(process.env.DAILY_LIMIT || 20);
+dailyLimit = Number(process.env.DAILY_LIMIT || 30);
 if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 if (!existsSync(uploadDir)) mkdirSync(uploadDir, { recursive: true });
 
