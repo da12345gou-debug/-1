@@ -407,16 +407,19 @@ function appendResultCard({ titleText, image, downloadUrl, note }) {
   img.src = image;
   img.alt = titleText;
   card.append(title, img);
-  if (downloadUrl) {
+  const downloadSource = image?.startsWith("data:image/") ? image : downloadUrl;
+  if (downloadSource) {
     const downloadLink = document.createElement("a");
-    downloadLink.href = downloadUrl;
-    downloadLink.download = createDownloadName(titleText, downloadUrl);
+    downloadLink.href = downloadSource;
+    downloadLink.download = createDownloadName(titleText, downloadSource);
     downloadLink.className = "download-button";
     downloadLink.textContent = "下载图片";
-    downloadLink.addEventListener("click", (event) => {
-      event.preventDefault();
-      downloadImage(downloadUrl, downloadLink.download);
-    });
+    if (!downloadSource.startsWith("data:image/")) {
+      downloadLink.addEventListener("click", (event) => {
+        event.preventDefault();
+        downloadImage(downloadSource, downloadLink.download);
+      });
+    }
     title.append(downloadLink);
   }
   if (note) {
