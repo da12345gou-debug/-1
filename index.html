@@ -25,8 +25,15 @@
       <section class="hero">
         <div class="hero-copy">
           <p class="eyebrow">DUX自研</p>
-          <h1>私域产品海报 一键生成工具</h1>
-          <p class="intro">按顺序补全运营信息，可上传产品六面图，也可直接使用内置参考图生成 3:4 商业 KV。</p>
+          <div class="title-row">
+            <h1>私域产品海报 一键生成工具</h1>
+            <span class="version-badge">2.1版本</span>
+          </div>
+          <div class="hero-layout-control" aria-label="画面方向">
+            <input id="layoutMode" type="hidden" name="layout" value="portrait" form="posterForm" />
+            <button class="layout-option is-active" type="button" data-layout-option="portrait">竖版<span class="option-note">（效果更好）</span></button>
+            <button class="layout-option" type="button" data-layout-option="landscape">横版</button>
+          </div>
         </div>
       </section>
 
@@ -46,28 +53,29 @@
           </div>
 
           <div class="field-grid">
+            <div class="field field-wide ratio-field">
+              <span class="field-label">画面比例</span>
+              <select id="aspectRatio" name="aspectRatio"></select>
+            </div>
+
             <label class="field">
               <span class="field-label">主色调</span>
               <input name="mainTone" required value="嫩绿色" />
-              <small>背景主色</small>
             </label>
 
             <label class="field">
               <span class="field-label">标题颜色</span>
               <input name="titleColor" required value="白色点缀黄色" />
-              <small>标题用色</small>
             </label>
 
             <label class="field">
               <span class="field-label">环境场景</span>
               <input name="environmentScene" required value="春日旷野露营环境" />
-              <small>背景场景</small>
             </label>
 
             <label class="field">
-              <span class="field-label">悬浮元素</span>
+              <span class="field-label">悬浮元素（金币，红包，花瓣）</span>
               <input name="floatingElement" required value="花瓣" />
-              <small>金币、红包、花瓣</small>
             </label>
 
             <label class="field">
@@ -80,70 +88,19 @@
               <input name="subTitle" required value="小度家用智能好物分享" />
             </label>
 
-            <label class="field field-wide muted-api-field">
-              <span class="field-label">OpenAI API Key</span>
-              <input name="apiKey" type="password" autocomplete="off" placeholder="可不填，默认使用服务端 Key" />
-              <small>仅本次使用</small>
-            </label>
-
-            <label class="field field-wide muted-api-field">
-              <span class="field-label">API 接口地址</span>
-              <input name="apiBaseUrl" autocomplete="off" placeholder="默认官方 OpenAI；第三方请填 Base URL" />
-              <small>第三方必填</small>
-            </label>
-
           </div>
 
-          <details class="advanced-box">
-            <summary>高级设置</summary>
-            <div class="advanced">
-              <label class="field compact-field">
-                <span class="field-label">模型</span>
-                <select name="model">
-                  <option value="gpt-image-2-1K" selected>gpt-image-2-1K · 约 2K 效果</option>
-                  <option value="gpt-image-2-4K">gpt-image-2-4K · 超高清</option>
-                  <option value="gpt-image-1.5">gpt-image-1.5</option>
-                  <option value="gpt-image-1">gpt-image-1</option>
-                  <option value="gpt-image-1-mini">gpt-image-1-mini</option>
-                </select>
-                <small>默认即可</small>
-              </label>
-              <label class="field compact-field">
-                <span class="field-label">尺寸</span>
-                <select name="size">
-                  <option value="auto">auto</option>
-                  <option value="1024x1024">1024x1024 · 1K</option>
-                  <option value="1024x1536" selected>1024x1536 · 竖版高清</option>
-                  <option value="1536x1024">1536x1024 · 横版</option>
-                </select>
-                <small>自动即可</small>
-              </label>
-              <label class="field compact-field">
-                <span class="field-label">质量</span>
-                <select name="quality">
-                  <option value="medium" selected>medium</option>
-                  <option value="high">high</option>
-                  <option value="low">low</option>
-                </select>
-                <small>越高越细</small>
-              </label>
-              <label class="field compact-field">
-                <span class="field-label">格式</span>
-                <select name="outputFormat">
-                  <option value="png" selected>png</option>
-                  <option value="webp">webp</option>
-                  <option value="jpeg">jpeg</option>
-                </select>
-                <small>默认 png</small>
-              </label>
-            </div>
-          </details>
+          <input type="hidden" name="apiKey" value="" />
+          <input type="hidden" name="apiBaseUrl" value="" />
+          <input type="hidden" name="model" value="gpt-image-2-1K" />
+          <input type="hidden" name="quality" value="medium" />
+          <input type="hidden" name="outputFormat" value="png" />
 
           <div class="section-head upload-head">
             <div class="step-badge">2</div>
             <div>
               <p class="section-label">上传参考图</p>
-              <h2>上传产品六面图</h2>
+              <h2>上传产品白底图</h2>
             </div>
           </div>
 
@@ -151,12 +108,12 @@
             <label class="drop-zone">
               <input id="productImage" type="file" accept="image/png,image/jpeg,image/webp" />
               <span class="upload-copy">
-                <strong>上传产品六面图</strong>
+                <strong>上传产品白底图</strong>
                 <span>不上传则使用内置参考图；上传后以你的图为准</span>
               </span>
               <span class="example-preview">
                 <span>示例缩略图</span>
-                <img src="/assets/product-example.png" alt="产品六面图示例" />
+                <img src="/assets/product-example.png" alt="产品白底图示例" />
               </span>
               <img id="productPreview" alt="" />
             </label>
@@ -176,19 +133,25 @@
               <p class="section-label">结果预览</p>
               <h2>生成后在这里查看</h2>
             </div>
-            <a id="downloadLink" class="download-link" hidden target="_blank" rel="noreferrer">打开图片</a>
+            <a id="downloadLink" class="download-link" hidden download="kv.png">下载图片</a>
           </div>
           <div class="result-frame">
             <div id="emptyState" class="empty-state">
               <strong>等待生成</strong>
               <span>可直接生成，也可上传产品图后生成。</span>
             </div>
-            <img id="resultImage" alt="生成的运营聚合 KV" />
+            <button id="previewButton" class="result-preview-button" type="button" aria-label="查看大图" hidden>
+              <img id="resultImage" alt="生成的运营聚合 KV" />
+            </button>
           </div>
           <textarea id="promptPreview" readonly hidden></textarea>
         </aside>
       </section>
     </main>
-    <script src="/app.js"></script>
+    <div id="imageModal" class="image-modal" hidden>
+      <button id="modalClose" class="modal-close" type="button" aria-label="关闭大图">×</button>
+      <img id="modalImage" alt="生成的运营聚合 KV 大图" />
+    </div>
+    <script src="/app.js?v=20260625-waiting"></script>
   </body>
 </html>
