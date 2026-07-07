@@ -12,7 +12,7 @@ dns.setDefaultResultOrder("ipv4first");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
 const logsDir = path.join(__dirname, "logs");
-const port = Number(process.env.PORT || 4199);
+const port = Number(process.env.PORT || 4174);
 const host = process.env.HOST || "0.0.0.0";
 const accessPassword = String(process.env.ACCESS_PASSWORD || "DUUE123").trim();
 const sessions = new Map();
@@ -349,6 +349,10 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.method === "GET" && url.pathname === "/api/auth-status") {
     sendJson(res, 200, { locked: Boolean(accessPassword), authorized: isAuthorized(req) });
+    return;
+  }
+  if (req.method === "GET" && url.pathname === "/healthz") {
+    sendJson(res, 200, { ok: true });
     return;
   }
   if (req.method === "POST" && url.pathname === "/api/unlock") {

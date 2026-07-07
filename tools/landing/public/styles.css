@@ -917,3 +917,39 @@ h2 {
     margin: -22px -22px 24px;
   }
 }
+
+/* Remove decorative blank header in the combined workbench copy. */
+.form-panel::before,
+.is-frame-fitted .form-panel::before {
+  display: none;
+  content: none;
+}
+
+.form-panel {
+  padding-top: 32px;
+}
+
+.is-frame-fitted .form-panel {
+  padding-top: 22px;
+}
+
+/* Align the first content block to the workbench guide line after removing the blank header. */
+.app-shell {
+  width: min(1380px, calc(100% - 24px));
+  padding-top: 0;
+}
+
+.is-frame-fitted .app-shell {
+  width: min(1380px, calc(100% - 24px));
+  padding-top: 0;
+}
+
+.form-panel::before,
+.is-frame-fitted .form-panel::before {
+  display: none !important;
+  content: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}

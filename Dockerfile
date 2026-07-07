@@ -14,8 +14,8 @@ RUN mkdir -p logs \
   tools/copy/outputs
 
 ENV HOST=0.0.0.0
-ENV PORT=4199
+ENV PORT=4174
 
-EXPOSE 4199
+EXPOSE 4174
 
 CMD ["node", "server.js"]

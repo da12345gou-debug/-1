@@ -1165,3 +1165,39 @@ h2 {
   padding: 0 18px;
   white-space: nowrap;
 }
+
+/* Remove decorative blank header in the combined workbench copy. */
+.left > .panel:first-of-type::before,
+.is-frame-fitted .left > .panel:first-of-type::before {
+  display: none;
+  content: none;
+}
+
+.left > .panel:first-of-type {
+  padding-top: 32px;
+}
+
+.is-frame-fitted .left > .panel:first-of-type {
+  padding-top: 22px;
+}
+
+/* Align the first content block to the workbench guide line after removing the blank header. */
+.app-shell {
+  width: min(1380px, calc(100% - 24px));
+  padding-top: 0;
+}
+
+.is-frame-fitted .app-shell {
+  width: min(1380px, calc(100% - 24px));
+  padding-top: 0;
+}
+
+.left > .panel:first-of-type::before,
+.is-frame-fitted .left > .panel:first-of-type::before {
+  display: none !important;
+  content: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
