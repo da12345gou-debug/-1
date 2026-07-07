@@ -1435,6 +1435,15 @@ body::before,
   background: #f9fafb !important;
 }
 
+.quick-fill-chip.is-active,
+.quick-fill-chip[aria-pressed="true"] {
+  border-color: #9ca3af !important;
+  background: #e5e7eb !important;
+  color: #111827 !important;
+  outline: 2px solid #c7ccd3 !important;
+  outline-offset: -2px !important;
+}
+
 .section-label,
 .eyebrow {
   color: #4b5563 !important;
