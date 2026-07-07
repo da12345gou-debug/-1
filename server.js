@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
 const logsDir = path.join(__dirname, "logs");
 const port = Number(process.env.PORT || 4174);
-const host = process.env.HOST || "0.0.0.0";
+const host = "0.0.0.0";
 const accessPassword = String(process.env.ACCESS_PASSWORD || "DUUE123").trim();
 const sessions = new Map();
 
