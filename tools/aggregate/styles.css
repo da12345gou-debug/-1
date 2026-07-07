@@ -1413,13 +1413,13 @@ h2 {
 
 /* Final in-frame alignment: outer workbench owns the branch title */
 .app-shell {
-  width: min(1380px, calc(100% - 72px));
-  padding: 32px 0 60px;
+  width: min(1380px, calc(100% - 24px));
+  padding: 0 0 60px;
 }
 
 .is-frame-fitted .app-shell {
-  width: min(1380px, calc(100% - 48px));
-  padding: 18px 0 24px;
+  width: min(1380px, calc(100% - 24px));
+  padding: 0 0 24px;
   transform: scale(var(--fit-scale, 1));
   transform-origin: top left;
 }
@@ -1523,6 +1523,11 @@ h2 {
   border: 1px solid rgba(21, 87, 255, 0.24);
   border-bottom-color: transparent;
   box-shadow: 0 -10px 28px rgba(21, 87, 255, 0.14);
+}
+
+.preview-panel,
+.is-frame-fitted .preview-panel {
+  top: 0 !important;
 }
 
 @media (max-width: 1080px) {

@@ -953,3 +953,8 @@ h2 {
   border: 0 !important;
   box-shadow: none !important;
 }
+
+.preview-panel,
+.is-frame-fitted .preview-panel {
+  top: 0 !important;
+}
