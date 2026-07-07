@@ -1729,6 +1729,14 @@ body::before {
   background: #f9fafb !important;
 }
 
+.preset-actions .secondary-button.is-active,
+.preset-actions .secondary-button[aria-pressed="true"] {
+  border-color: #9ca3af !important;
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+  box-shadow: inset 0 0 0 1px #d1d5db !important;
+}
+
 .section-label,
 .eyebrow {
   color: #4b5563 !important;

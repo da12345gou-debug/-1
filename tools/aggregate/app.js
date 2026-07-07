@@ -370,10 +370,17 @@ unlockForm.addEventListener("submit", async (event) => {
   hideLock();
 });
 
-document.querySelectorAll("[data-preset]").forEach((button) => {
+const presetButtons = Array.from(document.querySelectorAll("[data-preset]"));
+
+presetButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const preset = presets[button.dataset.preset];
     if (!preset) return;
+    presetButtons.forEach((presetButton) => {
+      const isActive = presetButton === button;
+      presetButton.classList.toggle("is-active", isActive);
+      presetButton.setAttribute("aria-pressed", String(isActive));
+    });
     Object.entries(preset).forEach(([name, value]) => {
       if (name === "label") return;
       const input = form.elements[name];
