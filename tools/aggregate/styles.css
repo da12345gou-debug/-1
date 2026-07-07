@@ -1638,3 +1638,147 @@ button.primary,
   border-color: #111827;
   font-size: 14px;
 }
+
+/* Strict B-end neutralization: no large blue/orange blocks or glow. */
+.step-badge,
+.layout-option,
+.layout-option.is-active,
+.form-panel .layout-option.is-active,
+.primary-button,
+.primary-button:hover,
+.primary-button:disabled,
+.drop-zone,
+.drop-zone:hover,
+.drop-zone.has-image,
+.download-link,
+.secondary-button {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.step-badge,
+.layout-option.is-active,
+.form-panel .layout-option.is-active {
+  background: #f1f3f5 !important;
+  color: #3b4251 !important;
+  border-color: rgba(17, 21, 29, 0.1) !important;
+}
+
+.primary-button,
+.primary-button:hover {
+  background: #1f2937 !important;
+  border-color: #1f2937 !important;
+  color: #fff !important;
+}
+
+/* Enterprise final reset: neutral B-end controls without blue/orange glow. */
+:root {
+  --accent: #374151;
+  --accent-2: #f3f4f6;
+  --brand: #374151;
+  --brand-hover: #1f2937;
+  --shadow: none;
+  --shadow-soft: none;
+}
+
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+}
+
+body {
+  background: #f6f7f9 !important;
+}
+
+body::before {
+  display: none !important;
+}
+
+.panel,
+.form-panel,
+.preview-panel,
+.lock-panel,
+.result-frame {
+  border-color: #e5e7eb !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.step-badge,
+.layout-option.is-active,
+.form-panel .layout-option.is-active {
+  border-color: #d1d5db !important;
+  background: #f3f4f6 !important;
+  background-image: none !important;
+  color: #374151 !important;
+}
+
+.layout-option {
+  border-color: #e5e7eb !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #4b5563 !important;
+}
+
+.layout-option:hover {
+  border-color: #d1d5db !important;
+  background: #f9fafb !important;
+}
+
+.section-label,
+.eyebrow {
+  color: #4b5563 !important;
+}
+
+h1 {
+  color: #111827 !important;
+  font-size: clamp(22px, 2vw, 30px) !important;
+}
+
+h2 {
+  color: #111827 !important;
+  font-size: 20px !important;
+}
+
+.drop-zone,
+input,
+select,
+textarea {
+  border-color: #e5e7eb !important;
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+.drop-zone:hover,
+.drop-zone.has-image {
+  border-color: #d1d5db !important;
+  background: #f9fafb !important;
+}
+
+.primary-button,
+.primary-button:hover,
+button.primary,
+button.primary:hover {
+  border-color: #1f2937 !important;
+  background: #1f2937 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+.secondary-button,
+.download-link,
+.download-button {
+  border-color: #d1d5db !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #374151 !important;
+}
+
+.section-label,
+.eyebrow {
+  color: #5f6875 !important;
+}

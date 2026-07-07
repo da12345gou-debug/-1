@@ -578,3 +578,113 @@ body::before {
 .frame-shell {
   border-radius: 14px;
 }
+
+/* Strict B-end neutralization for selected states. */
+.tool-card,
+.tool-card.active,
+.tool-card:hover,
+.tool-card:active {
+  background-image: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.tool-card.active {
+  border-left: 3px solid #3b4251;
+  background: #f5f6f8 !important;
+}
+
+/* Enterprise final reset: neutral B-end states, no glow, no oversized blue. */
+:root {
+  --accent: #374151;
+  --accent-2: #f3f4f6;
+  --shadow: none;
+  --shadow-soft: none;
+}
+
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+}
+
+body {
+  background: #f6f7f9 !important;
+}
+
+body::before {
+  display: none !important;
+}
+
+.login-card,
+.sidebar,
+.workspace,
+.frame-shell {
+  border: 1px solid #e5e7eb !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.login-card button {
+  background: #1f2937 !important;
+  border-color: #1f2937 !important;
+  color: #ffffff !important;
+}
+
+.brand h1,
+.workspace-head h2 {
+  color: #111827 !important;
+  font-size: 22px !important;
+  line-height: 1.2 !important;
+  font-weight: 720 !important;
+}
+
+.workspace-head p:last-child,
+.brand p:last-child {
+  color: #6b7280 !important;
+}
+
+.tool-card {
+  min-height: 72px !important;
+  padding: 14px 16px !important;
+  border: 1px solid #e5e7eb !important;
+  border-left: 3px solid transparent !important;
+  border-radius: 12px !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #111827 !important;
+  transform: none !important;
+}
+
+.tool-card:hover {
+  border-color: #d1d5db !important;
+  background: #f9fafb !important;
+}
+
+.tool-card.active {
+  border-color: #d1d5db !important;
+  border-left-color: #1f2937 !important;
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.tool-card span {
+  color: #111827 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.tool-card small,
+.tool-card.active small {
+  color: #6b7280 !important;
+  font-size: 11px !important;
+}
+
+.test-badge,
+.tool-card.active .test-badge {
+  border: 1px solid #d1d5db !important;
+  background: #f3f4f6 !important;
+  color: #6b7280 !important;
+}

@@ -1340,3 +1340,142 @@ button.primary,
 .orb {
   box-shadow: none;
 }
+
+/* Strict B-end neutralization: no large blue/orange blocks or glow. */
+.step-badge,
+.quick-fill-chip,
+.quick-fill-chip:hover,
+.quick-fill-chip.is-active,
+.primary,
+button.primary,
+.drop-preview,
+.drop-preview:hover,
+.drop-card,
+.drop-card.is-dragover .drop-preview,
+.result-preview {
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.step-badge,
+.quick-fill-chip.is-active {
+  background: #f1f3f5 !important;
+  color: #3b4251 !important;
+  border-color: rgba(17, 21, 29, 0.1) !important;
+}
+
+.primary,
+button.primary {
+  background: #1f2937 !important;
+  border-color: #1f2937 !important;
+  color: #fff !important;
+}
+
+.section-label,
+.eyebrow {
+  color: #5f6875 !important;
+}
+
+/* Enterprise final reset: neutral B-end controls without blue/orange glow. */
+:root {
+  --accent: #374151;
+  --accent-2: #f3f4f6;
+  --shadow: none;
+  --shadow-soft: none;
+}
+
+*,
+*::before,
+*::after {
+  box-shadow: none !important;
+}
+
+body {
+  background: #f6f7f9 !important;
+}
+
+body::before,
+.left > .panel:first-of-type::before,
+.is-frame-fitted .left > .panel:first-of-type::before {
+  display: none !important;
+  content: none !important;
+}
+
+.panel,
+.result-panel,
+.lock-card,
+.result-preview,
+.drop-card,
+.drop-preview {
+  border-color: #e5e7eb !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.step-badge,
+.quick-fill-chip.is-active {
+  border-color: #d1d5db !important;
+  background: #f3f4f6 !important;
+  background-image: none !important;
+  color: #374151 !important;
+}
+
+.quick-fill-chip {
+  border-color: #e5e7eb !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #4b5563 !important;
+}
+
+.quick-fill-chip:hover {
+  border-color: #d1d5db !important;
+  background: #f9fafb !important;
+}
+
+.section-label,
+.eyebrow {
+  color: #4b5563 !important;
+}
+
+h1 {
+  color: #111827 !important;
+  font-size: clamp(22px, 2vw, 30px) !important;
+}
+
+h2,
+.result-head span {
+  color: #111827 !important;
+  font-size: 20px !important;
+}
+
+.drop-preview:hover,
+.drop-card.is-dragover .drop-preview,
+input,
+select,
+textarea {
+  border-color: #d1d5db !important;
+  background: #f9fafb !important;
+  background-image: none !important;
+}
+
+.primary,
+.primary:hover,
+button.primary,
+button.primary:hover {
+  border-color: #1f2937 !important;
+  background: #1f2937 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+.result-head a,
+.download-link,
+.download-button {
+  border-color: #d1d5db !important;
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #374151 !important;
+}
