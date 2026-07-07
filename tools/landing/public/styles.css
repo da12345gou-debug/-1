@@ -1219,3 +1219,61 @@ button.primary:hover {
   background-image: none !important;
   color: #374151 !important;
 }
+
+/* Local preview fix: scale landing results to each generated image ratio. */
+.result-list {
+  display: grid !important;
+  gap: 16px !important;
+}
+
+.result-card {
+  width: min(100%, 820px) !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.result-card.has-result-image .result-image-button {
+  width: min(100%, 820px) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: min(68vh, 720px) !important;
+  aspect-ratio: var(--result-ratio, 9 / 16) !important;
+  margin: 0 auto !important;
+}
+
+.result-card.has-result-image .result-image-button img {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  object-fit: contain !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+}
+
+.result-image-button {
+  width: min(100%, 820px) !important;
+  max-height: min(68vh, 720px) !important;
+  aspect-ratio: var(--result-ratio, 9 / 16) !important;
+  margin: 0 auto !important;
+}
+
+.result-image-button img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.empty-state {
+  min-height: 390px !important;
+  display: grid !important;
+  place-content: center !important;
+  justify-items: center !important;
+  text-align: center !important;
+}
+
+#downloadLink[hidden],
+.download-link[hidden] {
+  display: none !important;
+}

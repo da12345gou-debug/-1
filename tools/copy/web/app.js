@@ -77,6 +77,24 @@ function loadingMarkup(initial = "03:00") {
   return `<div class="loading-stack"><div class="orb"></div><div class="loading-label">预计剩余</div><div id="countdownText" class="countdown">${initial}</div></div>`;
 }
 
+function clearResultRatio() {
+  resultPreview.classList.remove("has-result-image");
+  resultPreview.style.removeProperty("--result-ratio");
+}
+
+function applyResultRatio(container, image) {
+  if (!container || !image) return;
+  const update = () => {
+    const width = image.naturalWidth || 0;
+    const height = image.naturalHeight || 0;
+    if (!width || !height) return;
+    container.style.setProperty("--result-ratio", `${width} / ${height}`);
+    resultPreview.classList.add("has-result-image");
+  };
+  if (image.complete) update();
+  else image.addEventListener("load", update, { once: true });
+}
+
 function updateCountdown() {
   const node = document.querySelector("#countdownText");
   if (!node) return;
@@ -253,7 +271,9 @@ async function pollJob(jobId) {
       stopCountdown();
       clearJob();
       resultPreview.innerHTML = `<button class="result-image-button" type="button" aria-label="查看大图"><img src="${result.image}" alt="生成结果"></button>`;
-      resultPreview.querySelector(".result-image-button")?.addEventListener("click", () => openImageModal(result.image));
+      const imageButton = resultPreview.querySelector(".result-image-button");
+      applyResultRatio(imageButton, imageButton?.querySelector("img"));
+      imageButton?.addEventListener("click", () => openImageModal(result.image));
       downloadLink.href = result.downloadUrl;
       downloadLink.hidden = false;
       generateBtn.disabled = false;
@@ -285,6 +305,7 @@ function watchJob(jobId, estimate = activeEstimate) {
   stopPolling();
   const seconds = activeDeadline ? Math.max(0, Math.ceil((activeDeadline - Date.now()) / 1000)) : estimate;
   resultPreview.innerHTML = loadingMarkup(seconds > 0 ? formatTime(seconds) : "响应较慢");
+  clearResultRatio();
   startCountdown(estimate);
   generateBtn.disabled = true;
   downloadLink.hidden = true;
@@ -336,6 +357,7 @@ generateBtn.addEventListener("click", async () => {
   generateBtn.disabled = true;
   setMessage("正在提交任务...");
   resultPreview.innerHTML = loadingMarkup(formatTime(estimate));
+  clearResultRatio();
   startCountdown(estimate);
   downloadLink.hidden = true;
 
@@ -357,6 +379,7 @@ generateBtn.addEventListener("click", async () => {
     generateBtn.disabled = false;
     setMessage(error.message, "error");
     resultPreview.innerHTML = emptyResultMarkup;
+    clearResultRatio();
   }
 });
 

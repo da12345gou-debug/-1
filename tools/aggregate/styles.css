@@ -1759,6 +1759,69 @@ textarea {
   background: #f9fafb !important;
 }
 
+/* Local preview fix: keep the result area aligned to the selected output ratio. */
+.result-frame {
+  width: min(100%, 420px) !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: min(58vh, 560px) !important;
+  aspect-ratio: var(--preview-ratio, 3 / 4) !important;
+  margin: 0 auto !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+}
+
+.result-frame.is-landscape {
+  width: min(100%, 820px) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: min(46vh, 460px) !important;
+}
+
+.empty-state {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  place-content: center !important;
+  justify-items: center !important;
+  gap: 10px !important;
+  padding: 24px !important;
+  text-align: center !important;
+}
+
+.result-preview-button[hidden],
+#previewButton[hidden],
+.download-link[hidden],
+#downloadLink[hidden] {
+  display: none !important;
+}
+
+.result-preview-button {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+#resultImage {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+
+.result-frame:not(.is-landscape) #resultImage {
+  aspect-ratio: var(--preview-ratio, 3 / 4) !important;
+}
+
 .primary-button,
 .primary-button:hover,
 button.primary,

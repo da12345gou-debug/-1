@@ -13,6 +13,9 @@ const heroInput = document.querySelector("#heroImage");
 const heroPreview = document.querySelector("#heroPreview");
 const robotReferenceInput = document.querySelector("#robotReferenceImages");
 const robotReferencePreview = document.querySelector("#robotReferencePreview");
+const lockScreen = document.querySelector("#lockScreen");
+const unlockForm = document.querySelector("#unlockForm");
+const unlockMessage = document.querySelector("#unlockMessage");
 
 function openImageModal(src) {
   if (!src || !imageModal || !modalImage) return;
@@ -34,9 +37,6 @@ imageModal?.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && imageModal && !imageModal.hidden) closeImageModal();
 });
-const lockScreen = document.querySelector("#lockScreen");
-const unlockForm = document.querySelector("#unlockForm");
-const unlockMessage = document.querySelector("#unlockMessage");
 
 if (emptyState) {
   emptyState.innerHTML = `
@@ -496,6 +496,19 @@ function setMainDownload(downloadUrl, titleText) {
   }
 }
 
+function applyResultRatio(container, image) {
+  if (!container || !image) return;
+  const update = () => {
+    const width = image.naturalWidth || 0;
+    const height = image.naturalHeight || 0;
+    if (!width || !height) return;
+    container.style.setProperty("--result-ratio", `${width} / ${height}`);
+    container.classList.add("has-result-image");
+  };
+  if (image.complete) update();
+  else image.addEventListener("load", update, { once: true });
+}
+
 function appendResultCard({ titleText, image, downloadUrl, note }) {
   const card = document.createElement("article");
   card.className = "result-card";
@@ -512,6 +525,7 @@ function appendResultCard({ titleText, image, downloadUrl, note }) {
   imageButton.append(img);
   imageButton.addEventListener("click", () => openImageModal(image));
   card.append(title, imageButton);
+  applyResultRatio(imageButton, img);
   const downloadSource = image?.startsWith("data:image/") ? image : downloadUrl;
   if (downloadSource) {
     const downloadLink = document.createElement("a");
