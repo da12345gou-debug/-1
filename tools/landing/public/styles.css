@@ -1012,3 +1012,78 @@ h2 {
 .is-frame-fitted .preview-panel {
   top: 0 !important;
 }
+
+/* Quiet combined-workbench skin. */
+:root {
+  --shadow: none;
+  --shadow-soft: none;
+  --brand: #2f5bd3;
+  --brand-hover: #2449ad;
+  --brand-light: rgba(47, 91, 211, 0.08);
+  --warm: #5f6875;
+}
+
+body {
+  background: #f7f8fa;
+}
+
+body::before {
+  display: none;
+}
+
+.panel,
+.form-panel,
+.preview-panel,
+.lock-panel {
+  border-color: rgba(17, 21, 29, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+h1 {
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 760;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 740;
+}
+
+.step-badge {
+  background: #f3f6fb;
+  color: #2f5bd3;
+}
+
+.drop-zone,
+.empty-state,
+.result-image-button {
+  border-color: rgba(17, 21, 29, 0.08);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.drop-zone:hover,
+.drop-zone.has-image,
+.drop-zone.is-selected {
+  border-color: rgba(47, 91, 211, 0.18);
+  background: #fafbfc;
+}
+
+.download-link,
+.download-button,
+button.primary,
+.primary-button {
+  box-shadow: none !important;
+}
+
+button.primary,
+.primary-button {
+  background: #111827;
+  border-color: #111827;
+  font-size: 14px;
+}

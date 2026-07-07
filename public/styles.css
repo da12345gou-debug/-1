@@ -418,3 +418,163 @@ iframe {
     grid-template-columns: 260px minmax(0, 1fr);
   }
 }
+
+/* Quiet workbench UI: compact scale, neutral selected states, minimal shadows. */
+:root {
+  --accent: #2f5bd3;
+  --accent-2: #eef2f7;
+  --shadow: 0 10px 28px rgba(33, 44, 70, 0.06);
+  --shadow-soft: none;
+  --outer-gutter: 24px;
+  --section-gap: 22px;
+  --panel-pad-x: 28px;
+  --panel-pad-y: 30px;
+  --card-gap: 12px;
+}
+
+body {
+  background: #f7f8fa;
+}
+
+body::before {
+  display: none;
+}
+
+.login-card,
+.sidebar,
+.workspace {
+  border-color: rgba(17, 21, 29, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.login-card {
+  width: min(480px, 100%);
+  gap: 16px;
+  padding: 34px;
+}
+
+.login-card h1 {
+  font-size: 24px;
+  font-weight: 760;
+  line-height: 1.25;
+}
+
+.login-card p {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.login-card input {
+  min-height: 46px;
+  border-radius: 12px;
+}
+
+.login-card input:focus {
+  border-color: rgba(47, 91, 211, 0.34);
+  box-shadow: 0 0 0 3px rgba(47, 91, 211, 0.08);
+}
+
+.login-card button {
+  min-height: 46px;
+  border-radius: 12px;
+  background: #111827;
+  border-color: #111827;
+  font-size: 14px;
+  font-weight: 720;
+  box-shadow: none;
+}
+
+.shell {
+  grid-template-columns: 320px minmax(0, 1fr);
+}
+
+.sidebar {
+  gap: 24px;
+}
+
+.eyebrow {
+  margin-bottom: 10px;
+  color: #87909f;
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.brand h1,
+.workspace-head h2 {
+  font-size: 23px;
+  line-height: 1.18;
+  font-weight: 760;
+}
+
+.brand p:last-child {
+  margin-top: 14px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tool-card {
+  min-height: 76px;
+  gap: 6px;
+  padding: 15px 16px;
+  border-radius: 12px;
+  background: #fff;
+  border-color: rgba(17, 21, 29, 0.08);
+  box-shadow: none;
+  transform: none;
+}
+
+.tool-card:hover {
+  border-color: rgba(17, 21, 29, 0.14);
+  background: #fafbfc;
+  transform: none;
+}
+
+.tool-card.active {
+  border-color: rgba(47, 91, 211, 0.22);
+  background: #f3f6fb;
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.tool-card span {
+  font-size: 14px;
+  font-weight: 740;
+}
+
+.tool-card small,
+.tool-card.active small {
+  color: #717b89;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.test-badge,
+.tool-card.active .test-badge {
+  top: 10px;
+  right: 10px;
+  min-height: 20px;
+  padding: 0 7px;
+  border-color: rgba(17, 21, 29, 0.08);
+  background: #f2f4f7;
+  color: #737b87;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.workspace-head {
+  padding-bottom: 18px;
+}
+
+.workspace-head p:last-child {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.frame-shell {
+  border-radius: 14px;
+}

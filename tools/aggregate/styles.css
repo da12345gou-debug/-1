@@ -1553,3 +1553,88 @@ h2 {
     padding: 22px;
   }
 }
+
+/* Quiet combined-workbench skin. */
+:root {
+  --shadow: none;
+  --shadow-soft: none;
+  --accent: #2f5bd3;
+  --accent-2: #eef2f7;
+}
+
+body {
+  background: #f7f8fa;
+}
+
+body::before {
+  display: none;
+}
+
+.panel,
+.form-panel,
+.preview-panel,
+.lock-panel {
+  border-color: rgba(17, 21, 29, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.hero {
+  padding-bottom: 18px;
+}
+
+h1 {
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 760;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 740;
+}
+
+.layout-option,
+.secondary-button,
+.download-link,
+button.primary,
+.primary-button {
+  box-shadow: none !important;
+}
+
+.layout-option {
+  border-color: rgba(17, 21, 29, 0.08);
+  background: #fff;
+  color: #5f6875;
+}
+
+.layout-option.is-active,
+.form-panel .layout-option.is-active {
+  border-color: rgba(47, 91, 211, 0.22);
+  background: #f3f6fb;
+  color: #11151d;
+  box-shadow: none !important;
+}
+
+.drop-zone,
+.result-frame {
+  border-color: rgba(17, 21, 29, 0.08);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: none;
+}
+
+.drop-zone:hover,
+.drop-zone.has-image {
+  border-color: rgba(47, 91, 211, 0.18);
+  background: #fafbfc;
+}
+
+button.primary,
+.primary-button {
+  background: #111827;
+  border-color: #111827;
+  font-size: 14px;
+}
