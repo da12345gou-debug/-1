@@ -16,6 +16,9 @@ const generateBtn = document.querySelector("#generateBtn");
 const message = document.querySelector("#message");
 const resultPreview = document.querySelector("#resultPreview");
 const downloadLink = document.querySelector("#downloadLink");
+const imageModal = document.querySelector("#imageModal");
+const modalImage = document.querySelector("#modalImage");
+const modalClose = document.querySelector("#modalClose");
 
 const modeEstimates = { v1: 180, v2: 360 };
 const emptyResultMarkup = `
@@ -37,6 +40,27 @@ let pollTimer = 0;
 let activeJobId = localStorage.getItem("uuKvActiveJobId") || "";
 let activeEstimate = Number(localStorage.getItem("uuKvActiveEstimate") || modeEstimates.v1);
 let activeDeadline = Number(localStorage.getItem("uuKvActiveDeadline") || 0);
+
+function openImageModal(src) {
+  if (!src || !imageModal || !modalImage) return;
+  modalImage.src = src;
+  imageModal.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeImageModal() {
+  if (!imageModal) return;
+  imageModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+modalClose?.addEventListener("click", closeImageModal);
+imageModal?.addEventListener("click", (event) => {
+  if (event.target === imageModal) closeImageModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && imageModal && !imageModal.hidden) closeImageModal();
+});
 
 function setMessage(text, type = "") {
   message.textContent = text;
@@ -228,7 +252,8 @@ async function pollJob(jobId) {
       stopPolling();
       stopCountdown();
       clearJob();
-      resultPreview.innerHTML = `<img src="${result.image}" alt="生成结果">`;
+      resultPreview.innerHTML = `<button class="result-image-button" type="button" aria-label="查看大图"><img src="${result.image}" alt="生成结果"></button>`;
+      resultPreview.querySelector(".result-image-button")?.addEventListener("click", () => openImageModal(result.image));
       downloadLink.href = result.downloadUrl;
       downloadLink.hidden = false;
       generateBtn.disabled = false;

@@ -3,6 +3,9 @@ const message = document.querySelector("#message");
 const resultList = document.querySelector("#resultList");
 const emptyState = document.querySelector("#emptyState");
 const downloadLink = document.querySelector("#downloadLink");
+const imageModal = document.querySelector("#imageModal");
+const modalImage = document.querySelector("#modalImage");
+const modalClose = document.querySelector("#modalClose");
 const buttonText = document.querySelector("#buttonText");
 const prototypeInput = document.querySelector("#prototypeImage");
 const prototypePreview = document.querySelector("#prototypePreview");
@@ -10,6 +13,27 @@ const heroInput = document.querySelector("#heroImage");
 const heroPreview = document.querySelector("#heroPreview");
 const robotReferenceInput = document.querySelector("#robotReferenceImages");
 const robotReferencePreview = document.querySelector("#robotReferencePreview");
+
+function openImageModal(src) {
+  if (!src || !imageModal || !modalImage) return;
+  modalImage.src = src;
+  imageModal.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeImageModal() {
+  if (!imageModal) return;
+  imageModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+modalClose?.addEventListener("click", closeImageModal);
+imageModal?.addEventListener("click", (event) => {
+  if (event.target === imageModal) closeImageModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && imageModal && !imageModal.hidden) closeImageModal();
+});
 const lockScreen = document.querySelector("#lockScreen");
 const unlockForm = document.querySelector("#unlockForm");
 const unlockMessage = document.querySelector("#unlockMessage");
@@ -481,7 +505,13 @@ function appendResultCard({ titleText, image, downloadUrl, note }) {
   const img = document.createElement("img");
   img.src = image;
   img.alt = titleText;
-  card.append(title, img);
+  const imageButton = document.createElement("button");
+  imageButton.className = "result-image-button";
+  imageButton.type = "button";
+  imageButton.setAttribute("aria-label", "查看大图");
+  imageButton.append(img);
+  imageButton.addEventListener("click", () => openImageModal(image));
+  card.append(title, imageButton);
   const downloadSource = image?.startsWith("data:image/") ? image : downloadUrl;
   if (downloadSource) {
     const downloadLink = document.createElement("a");
