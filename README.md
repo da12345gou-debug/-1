@@ -1,40 +1,20 @@
-# 私域落地页一键延展工具
+# GTM运营工作台1.0版本
 
-这是独立部署包，不影响之前的“聚合 KV 工具”。
+这是三个复制版工具组合后的公网部署版本，用来替换原“落地页一键延展傻瓜工具”的部署仓库。
 
-## 运行
+旧版保留点：
+- Git 分支：`old-landing-tool-before-gtm-workbench-20260707`
+- Git 标签：`old-landing-tool-before-gtm-workbench-20260707`
+- 本地备份：`C:\Users\panyan05\Documents\落地页一键延展傻瓜工具\_backups\old-landing-tool-before-gtm-workbench-20260707`
 
+运行：
 ```bash
 npm start
 ```
 
-默认端口：
-
-```text
-4174
-```
-
-## 环境变量
-
-部署到云端时在平台后台配置：
-
-```text
-OPENAI_API_KEY=sk-...
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_IMAGE_MODEL=gpt-image-2-1K
-ACCESS_PASSWORD=change-me
-DAILY_LIMIT=10
-PORT=4174
-HOST=0.0.0.0
-```
-
-不要把真实 `.env` 提交到仓库。
-
-## Render / Node 服务部署
-
-- Runtime: Node
-- Build Command: 留空或 `npm install`
-- Start Command: `npm start`
-- Environment: 按上面的环境变量填写
-
-生成图会临时保存到 `outputs/`，上传切片会临时保存到 `uploads/`。
+公网环境变量：
+- `ACCESS_PASSWORD`
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`
+- `OPENAI_IMAGE_MODEL`
+- `DAILY_LIMIT`

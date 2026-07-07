@@ -1,8 +1,12 @@
 .env
 node_modules/
+logs/
 outputs/
 uploads/
-tools/
+tools/**/outputs/
+tools/**/uploads/
+tools/**/.env
 server.log
 server.err.log
+npm-debug.log
 .DS_Store

@@ -4,14 +4,18 @@ WORKDIR /app
 
 COPY package.json ./
 COPY server.js ./
-COPY LANDING_PAGE_TYPE_RULES.md ./
+COPY VERSION_NOTES.md ./
 COPY public ./public
+COPY tools ./tools
 
-RUN mkdir -p outputs uploads
+RUN mkdir -p logs \
+  tools/landing/outputs tools/landing/uploads \
+  tools/aggregate/outputs \
+  tools/copy/outputs
 
 ENV HOST=0.0.0.0
-ENV PORT=4174
+ENV PORT=4199
 
-EXPOSE 4174
+EXPOSE 4199
 
 CMD ["node", "server.js"]

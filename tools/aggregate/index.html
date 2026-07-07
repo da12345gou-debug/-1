@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>产品海报一键生成</title>
+    <link rel="stylesheet" href="styles.css?v=20260707-result-copy-final" />
+  </head>
+  <body>
+    <section id="lockScreen" class="lock-screen" hidden>
+      <form id="unlockForm" class="lock-panel">
+        <p class="eyebrow">Private Access</p>
+        <h2>请输入访问密码</h2>
+        <p>这是内部测试链接，验证后即可使用产品海报一键生成工具。</p>
+        <label class="field">
+          <span class="field-label">访问密码</span>
+          <input id="accessPassword" type="password" autocomplete="current-password" />
+        </label>
+        <button class="primary-button" type="submit">进入工具</button>
+        <p id="unlockMessage" class="message"></p>
+      </form>
+    </section>
+
+    <main class="app-shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">DUX自研</p>
+          <div class="title-row">
+            <h1>产品海报一键生成</h1>
+            <span class="version-badge">2.0</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <form id="posterForm" class="panel form-panel">
+          <div class="hero-layout-control" aria-label="画面方向">
+            <input id="layoutMode" type="hidden" name="layout" value="portrait" form="posterForm" />
+            <button class="layout-option is-active" type="button" data-layout-option="portrait">竖版<span class="option-note">（效果更好）</span></button>
+            <button class="layout-option" type="button" data-layout-option="landscape">横版</button>
+          </div>
+
+          <div class="section-head">
+            <div class="step-badge">1</div>
+            <div>
+              <p class="section-label">填写运营变量</p>
+              <h2>先把画面方向说清楚</h2>
+            </div>
+            <div class="preset-actions" aria-label="示例预设">
+              <button class="secondary-button" type="button" data-preset="spring">填入春日示例</button>
+              <button class="secondary-button" type="button" data-preset="summer">填入夏日示例</button>
+              <button class="secondary-button" type="button" data-preset="christmas">填入圣诞示例</button>
+            </div>
+          </div>
+
+          <div class="field-grid">
+            <div class="field field-wide ratio-field">
+              <span class="field-label">画面比例</span>
+              <select id="aspectRatio" name="aspectRatio"></select>
+            </div>
+
+            <label class="field">
+              <span class="field-label">主色调</span>
+              <input name="mainTone" required value="嫩绿色" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">标题颜色</span>
+              <input name="titleColor" required value="白色点缀黄色" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">环境场景</span>
+              <input name="environmentScene" required value="春日旷野露营环境" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">悬浮元素（金币，红包，花瓣）</span>
+              <input name="floatingElement" required value="花瓣" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">主标题</span>
+              <input name="mainTitle" required value="春夏换新季" />
+            </label>
+
+            <label class="field">
+              <span class="field-label">副标题</span>
+              <input name="subTitle" required value="小度家用智能好物分享" />
+            </label>
+
+          </div>
+
+          <input type="hidden" name="apiKey" value="" />
+          <input type="hidden" name="apiBaseUrl" value="" />
+          <input type="hidden" name="model" value="gpt-image-2-1K" />
+          <input type="hidden" name="quality" value="medium" />
+          <input type="hidden" name="outputFormat" value="png" />
+
+          <div class="section-head upload-head">
+            <div class="step-badge">2</div>
+            <div>
+              <p class="section-label">上传参考图</p>
+              <h2>上传产品白底图</h2>
+            </div>
+          </div>
+
+          <div class="upload-grid">
+            <label class="drop-zone">
+              <input id="productImage" type="file" accept="image/png,image/jpeg,image/webp" />
+              <span class="upload-copy">
+                <strong>上传产品白底图</strong>
+                <span>不上传则使用内置参考图；上传后以你的图为准</span>
+              </span>
+              <span class="example-preview">
+                <span>示例缩略图</span>
+                <img src="/assets/product-example.png" alt="产品白底图示例" />
+              </span>
+              <img id="productPreview" alt="" />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="primary-button" type="submit">
+              <span id="buttonText">生成 KV</span>
+            </button>
+          </div>
+          <p id="message" class="message"></p>
+        </form>
+
+        <aside class="panel preview-panel">
+          <div class="section-head preview-head">
+            <div>
+              <p class="section-label">结果预览</p>
+              <h2>生成后在这里查看</h2>
+            </div>
+            <a id="downloadLink" class="download-link" hidden download="kv.png">下载图片</a>
+          </div>
+          <div class="result-frame">
+            <div id="emptyState" class="empty-state">
+              <strong>等待生成</strong>
+              <span>生成完成后，结果会出现在这里。</span>
+            </div>
+            <button id="previewButton" class="result-preview-button" type="button" aria-label="查看大图" hidden>
+              <img id="resultImage" alt="生成的运营聚合 KV" />
+            </button>
+          </div>
+          <textarea id="promptPreview" readonly hidden></textarea>
+        </aside>
+      </section>
+    </main>
+    <div id="imageModal" class="image-modal" hidden>
+      <button id="modalClose" class="modal-close" type="button" aria-label="关闭大图">×</button>
+      <img id="modalImage" alt="生成的运营聚合 KV 大图" />
+    </div>
+    <script src="fit-frame.js?v=20260707-result-copy-final"></script>
+    <script src="app.js?v=20260707-result-copy-final"></script>
+  </body>
+</html>

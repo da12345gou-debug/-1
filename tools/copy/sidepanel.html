@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UU·KV</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div class="brand-mark">UU</div>
+        <div class="brand-copy">
+          <p class="eyebrow">KV RECOMPOSE</p>
+          <h1>UU·KV</h1>
+        </div>
+      </header>
+
+      <section class="panel upload-grid">
+        <div class="drop-card" data-drop="reference">
+          <input id="referenceImage" type="file" accept="image/*" />
+          <div id="referencePreview" class="drop-preview is-empty">
+            <span class="drop-icon">KV</span>
+            <strong>参考 KV 图</strong>
+            <small>点击或拖拽上传</small>
+          </div>
+        </div>
+
+        <div class="drop-card" data-drop="product">
+          <input id="productImage" type="file" accept="image/*" />
+          <div id="productPreview" class="drop-preview is-empty">
+            <span class="drop-icon">PR</span>
+            <strong>产品组合图</strong>
+            <small>点击或拖拽上传</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel control-panel">
+        <label class="field">
+          <span>输出尺寸</span>
+          <input id="ratioInput" type="text" placeholder="例如：16:9、3:4、1:1" value="16:9" />
+        </label>
+
+        <label class="field">
+          <span>画面调整要求</span>
+          <textarea id="adjustInput" rows="5" placeholder="例如：更高级、去掉价格区、标题改成新品发布、背景更清爽。可以不填。"></textarea>
+        </label>
+      </section>
+
+      <section class="panel result-panel">
+        <div class="output-head">
+          <span>生成结果</span>
+          <small id="resultStatus">等待导入</small>
+        </div>
+        <div class="drop-card result-drop" data-drop="result">
+          <input id="resultImage" type="file" accept="image/*" />
+          <div id="resultPreview" class="result-preview is-empty">
+            <div class="loading-stack">
+              <div class="orb"></div>
+              <div id="countdownText" class="countdown">00:00</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel output-panel is-collapsed">
+        <div class="output-head">
+          <span>任务提示词</span>
+          <small id="statusText">等待生成</small>
+        </div>
+        <textarea id="promptOutput" readonly rows="10" placeholder="这里仅用于调试，正常使用不需要看提示词。"></textarea>
+      </section>
+
+      <footer class="action-bar">
+        <button id="generateBtn" class="primary">生成</button>
+        <button id="downloadBtn" disabled>下载</button>
+        <button id="copyBtn" class="is-hidden" disabled>复制</button>
+        <button id="openBtn" class="is-hidden">打开 GPT</button>
+      </footer>
+    </main>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

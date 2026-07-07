@@ -1,0 +1,27 @@
+﻿{
+    "name":  "1.0版本",
+    "createdAt":  "2026-06-26 14:14:00 +08:00",
+    "note":  "用户指定当前节点为1.0版本，用于后续回朔",
+    "files":  [
+                  {
+                      "file":  "server.js",
+                      "sha256":  "F76F75C8D77D5D93E2423D2C367E405F2752FA70CAAA3BB238A0F28DC7149A42"
+                  },
+                  {
+                      "file":  "package.json",
+                      "sha256":  "A7A66DDB333BFD07AAA03A120086EED3A909455B54E444240F61DAA731E7E5EE"
+                  },
+                  {
+                      "file":  "web\\index.html",
+                      "sha256":  "F7DE263DFF6EF1C411AD2CD58DA3FC50DCB9D601BA56E7AC1F30B6CEEAB89F95"
+                  },
+                  {
+                      "file":  "web\\app.js",
+                      "sha256":  "799030D65518F253F45ADF840FCBD0CAEB295EBDBFDA558717B708C58C65A93A"
+                  },
+                  {
+                      "file":  "web\\style.css",
+                      "sha256":  "82E188ADFEFE8B8D3B72B82D6CE665D3312533E1F45EEFA887597FCD872761B6"
+                  }
+              ]
+}
