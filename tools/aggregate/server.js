@@ -17,8 +17,10 @@ const landscapeRobotPath = path.join(publicDir, "assets", "robot-reference-lands
 const defaultProductPath = path.join(publicDir, "assets", "product-example.png");
 const port = Number(process.env.PORT || 4173);
 const maxBodyBytes = 36 * 1024 * 1024;
+const temporaryLimitDate = "2026-07-07";
+const temporaryDailyLimit = 30;
 let accessPassword = "";
-let dailyLimit = 20;
+let baseDailyLimit = 10;
 const skipAuth = process.env.COMBINED_WORKBENCH === "1";
 const sessions = new Map();
 const usageBySession = new Map();
@@ -40,7 +42,7 @@ const defaultRatios = {
 
 await loadDotEnv();
 accessPassword = String(process.env.ACCESS_PASSWORD || "").trim();
-dailyLimit = Number(process.env.DAILY_LIMIT || 20);
+baseDailyLimit = Number(process.env.DAILY_LIMIT || 10);
 if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
 const mimeTypes = {
@@ -100,7 +102,16 @@ function isAuthorized(req) {
 }
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+}
+
+function currentDailyLimit() {
+  return todayKey() === temporaryLimitDate ? temporaryDailyLimit : baseDailyLimit;
 }
 
 function createJob() {
@@ -122,7 +133,7 @@ function checkUsage(req) {
   const sessionId = getSessionId(req) || "anonymous";
   const key = `${todayKey()}:${sessionId}`;
   const used = usageBySession.get(key) || 0;
-  if (used >= dailyLimit) return false;
+  if (used >= currentDailyLimit()) return false;
   usageBySession.set(key, used + 1);
   return true;
 }
@@ -351,7 +362,7 @@ async function runGenerate(body) {
 async function handleGenerate(req, res) {
   try {
     if (!isAuthorized(req)) return sendJson(res, 401, { error: "请先输入访问密码。" });
-    if (!checkUsage(req)) return sendJson(res, 429, { error: `今日生成次数已达上限（${dailyLimit} 次）。` });
+    if (!checkUsage(req)) return sendJson(res, 429, { error: `今日生成次数已达上限（${currentDailyLimit()} 次）。` });
     const body = JSON.parse(await readBody(req));
     const apiKey = String(body.apiKey || process.env.OPENAI_API_KEY || "").trim();
     if (!apiKey) return sendJson(res, 400, { error: "请填写 OpenAI API Key，或让服务端配置 OPENAI_API_KEY。" });
