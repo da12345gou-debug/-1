@@ -352,15 +352,32 @@ Negative constraints:
 No product deformation, no warped screens, no changed aspect ratios, no broken stands, no altered camera count or position, no pasted collage look, no floating products, no object intersections, no unreadable messy text, no leftover competing reference products.`;
 }
 
-async function fetchOpenAI(url, options, attempts = 3) {
+function openAiFetchTimeoutMs() {
+  const timeoutMs = Number(process.env.OPENAI_FETCH_TIMEOUT_MS || 240000);
+  return Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 240000;
+}
+
+function makeOpenAiTimeoutError(timeoutMs) {
+  const error = new Error(`图片生成服务响应超时（${Math.round(timeoutMs / 1000)} 秒），请稍后重试。`);
+  error.status = 504;
+  error.rawMessage = "OpenAI request timed out";
+  return error;
+}
+
+async function fetchOpenAI(url, options = {}, attempts = 3) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutMs = openAiFetchTimeoutMs();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      return await fetch(url, options);
+      return await fetch(url, { ...options, signal: controller.signal });
     } catch (error) {
-      lastError = error;
-      if (attempt === attempts) break;
+      lastError = error?.name === "AbortError" ? makeOpenAiTimeoutError(timeoutMs) : error;
+      if (lastError.status === 504 || attempt === attempts) break;
       await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+    } finally {
+      clearTimeout(timer);
     }
   }
   throw lastError;
