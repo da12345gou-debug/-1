@@ -1,8 +1,7 @@
-﻿import http from "node:http";
+import http from "node:http";
 import { readFile } from "node:fs/promises";
 import { createWriteStream, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
 import dns from "node:dns";
@@ -10,113 +9,38 @@ import dns from "node:dns";
 dns.setDefaultResultOrder("ipv4first");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicDir = path.join(__dirname, "public");
-const logsDir = path.join(__dirname, "logs");
-const port = Number(process.env.PORT || 10000);
-const host = "0.0.0.0";
-const accessPassword = String(process.env.ACCESS_PASSWORD || "DUUE123").trim();
+const preferredPublicDir = path.join(__dirname, "public");
+const publicDir = existsSync(path.join(preferredPublicDir, "index.html")) ? preferredPublicDir : __dirname;
+const outputDir = path.join(__dirname, "outputs");
+const defaultRobotPath = path.join(publicDir, "assets", "robot-reference.png");
+const landscapeRobotPath = path.join(publicDir, "assets", "robot-reference-landscape.png");
+const defaultProductPath = path.join(publicDir, "assets", "product-example.png");
+const port = Number(process.env.PORT || 4173);
+const maxBodyBytes = 36 * 1024 * 1024;
+let accessPassword = "";
+let dailyLimit = 20;
 const sessions = new Map();
+const usageBySession = new Map();
+const generateJobs = new Map();
 
-if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
+const ratioSizes = {
+  "2:3": "1024x1536",
+  "3:4": "1024x1365",
+  "4:5": "1024x1280",
+  "1:1": "1024x1024",
+  "16:9": "1536x864",
+  "1:2": "1536x768"
+};
 
-const tools = [
-  {
-    id: "landing",
-    name: "落地页一键延展",
-    sourceUrl: "http://127.0.0.1:4174/",
-    port: Number(process.env.LANDING_COPY_PORT || 5174),
-    path: "/landing",
-    mountPath: "/tools/landing",
-    cwd: path.join(__dirname, "tools", "landing")
-  },
-  {
-    id: "aggregate",
-    name: "产品海报一键生成",
-    sourceUrl: "http://127.0.0.1:4173/",
-    port: Number(process.env.AGGREGATE_COPY_PORT || 5173),
-    path: "/",
-    mountPath: "/tools/aggregate",
-    cwd: path.join(__dirname, "tools", "aggregate")
-  },
-  {
-    id: "copy",
-    name: "DEMO一键生成",
-    sourceUrl: "http://127.0.0.1:4188/",
-    port: Number(process.env.COPY_COPY_PORT || 5188),
-    path: "/",
-    mountPath: "/tools/copy",
-    cwd: path.join(__dirname, "tools", "copy")
-  }
-];
+const defaultRatios = {
+  portrait: "3:4",
+  landscape: "1:2"
+};
 
-const children = new Map();
-
-function toolUrl(tool) {
-  return `http://127.0.0.1:${tool.port}${tool.path}`;
-}
-
-function mountedToolUrl(tool) {
-  return `${tool.mountPath}/`;
-}
-
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function isToolListening(tool) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 600);
-  try {
-    const response = await fetch(toolUrl(tool), { signal: controller.signal });
-    return response.status < 500;
-  } catch {
-    return false;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function startTool(tool) {
-  if (!existsSync(path.join(tool.cwd, "server.js"))) return;
-  const existing = children.get(tool.id);
-  if (existing && !existing.killed) return;
-  if (await isToolListening(tool)) return;
-  const out = createWriteStream(path.join(logsDir, `${tool.id}.out.log`), { flags: "a" });
-  const err = createWriteStream(path.join(logsDir, `${tool.id}.err.log`), { flags: "a" });
-  const child = spawn(process.execPath, ["server.js"], {
-    cwd: tool.cwd,
-    env: {
-      ...process.env,
-      COMBINED_WORKBENCH: "1",
-      HOST: "127.0.0.1",
-      PORT: String(tool.port)
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true
-  });
-  child.stdout.pipe(out);
-  child.stderr.pipe(err);
-  children.set(tool.id, child);
-}
-
-async function ensureToolStarted(tool) {
-  if (await isToolListening(tool)) return true;
-  await startTool(tool);
-  for (let attempt = 0; attempt < 24; attempt += 1) {
-    await wait(150);
-    if (await isToolListening(tool)) return true;
-  }
-  return false;
-}
-
-function stopChildren() {
-  for (const child of children.values()) {
-    if (!child.killed) child.kill();
-  }
-}
-process.on("SIGINT", () => { stopChildren(); process.exit(0); });
-process.on("SIGTERM", () => { stopChildren(); process.exit(0); });
-process.on("exit", stopChildren);
+await loadDotEnv();
+accessPassword = String(process.env.ACCESS_PASSWORD || "").trim();
+dailyLimit = Number(process.env.DAILY_LIMIT || 20);
+if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -129,12 +53,29 @@ const mimeTypes = {
   ".svg": "image/svg+xml"
 };
 
-function sendJson(res, status, payload, method = "GET") {
+function sendJson(res, status, payload) {
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store"
   });
-  res.end(method === "HEAD" ? "" : JSON.stringify(payload));
+  res.end(JSON.stringify(payload));
+}
+
+function normalizeGenerateError(errorMessage, status = 500) {
+  const text = String(errorMessage || "").trim();
+  const lower = text.toLowerCase();
+  const isBusy =
+    status === 429 ||
+    status >= 500 ||
+    lower.includes("excessive system load") ||
+    lower.includes("system load") ||
+    lower.includes("overloaded") ||
+    lower.includes("temporarily unavailable") ||
+    lower.includes("service unavailable") ||
+    lower.includes("rate limit");
+
+  if (isBusy) return "当前生图服务繁忙，请稍后重试。";
+  return text || "生成失败，请稍后重试。";
 }
 
 function parseCookies(req) {
@@ -147,158 +88,310 @@ function parseCookies(req) {
 }
 
 function getSessionId(req) {
-  return parseCookies(req).gtm_workbench_session || "";
+  return parseCookies(req).kv_session || "";
 }
 
 function isAuthorized(req) {
   if (!accessPassword) return true;
   const sessionId = getSessionId(req);
-  return Boolean(sessionId && sessions.has(sessionId));
+  return sessionId && sessions.has(sessionId);
 }
 
-function sendLocked(req, res) {
-  const acceptsHtml = String(req.headers.accept || "").includes("text/html");
-  if (req.method === "GET" && acceptsHtml) {
-    res.writeHead(302, {
-      Location: "/",
-      "Cache-Control": "no-store"
-    });
-    res.end();
-    return;
-  }
-  sendJson(res, 401, { error: "请先输入入口访问密码。" });
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-async function serveIndex(req, res) {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const template = await readFile(path.join(publicDir, "index.html"), "utf8");
-  const authState = {
-    authorized: isAuthorized(req),
-    error: url.searchParams.get("error") === "1" ? "访问密码不正确。" : ""
+function createJob() {
+  const id = crypto.randomUUID();
+  const job = {
+    id,
+    status: "queued",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    result: null,
+    error: ""
   };
-  res.writeHead(200, {
-    "Content-Type": "text/html; charset=utf-8",
-    "Cache-Control": "no-store"
-  });
-  if (req.method === "HEAD") {
-    res.end();
-    return;
+  generateJobs.set(id, job);
+  setTimeout(() => generateJobs.delete(id), 60 * 60 * 1000).unref?.();
+  return job;
+}
+
+function checkUsage(req) {
+  const sessionId = getSessionId(req) || "anonymous";
+  const key = `${todayKey()}:${sessionId}`;
+  const used = usageBySession.get(key) || 0;
+  if (used >= dailyLimit) return false;
+  usageBySession.set(key, used + 1);
+  return true;
+}
+
+async function loadDotEnv() {
+  const envPath = path.join(__dirname, ".env");
+  if (!existsSync(envPath)) return;
+  const content = await readFile(envPath, "utf8");
+  for (const line of content.split(/\r?\n/)) {
+    const match = /^\s*\uFEFF?\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line);
+    if (!match || process.env[match[1]]) continue;
+    process.env[match[1]] = match[2].replace(/^["']|["']$/g, "");
   }
-  res.end(template.replace("__AUTH_STATE__", JSON.stringify(authState).replaceAll("<", "\\u003c")));
 }
 
-async function checkTool(tool) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 1200);
-  try {
-    const response = await fetch(toolUrl(tool), { signal: controller.signal });
-    return { ok: response.ok, status: response.status };
-  } catch (error) {
-    return { ok: false, error: error.name === "AbortError" ? "timeout" : "offline" };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function getMountedTool(pathname) {
-  return tools.find((tool) => pathname === tool.mountPath || pathname.startsWith(`${tool.mountPath}/`));
-}
-
-function rewriteToolText(text, tool) {
-  const prefix = tool.mountPath;
-  return text
-    .replaceAll('"/api', `"${prefix}/api`)
-    .replaceAll("'/api", `'${prefix}/api`)
-    .replaceAll("`/api", "`" + prefix + "/api")
-    .replaceAll('"/outputs', `"${prefix}/outputs`)
-    .replaceAll("'/outputs", `'${prefix}/outputs`)
-    .replaceAll("`/outputs", "`" + prefix + "/outputs")
-    .replaceAll('"/assets', `"${prefix}/assets`)
-    .replaceAll("'/assets", `'${prefix}/assets`)
-    .replaceAll('href="/styles.css"', `href="${prefix}/styles.css"`)
-    .replaceAll('href="/style.css"', `href="${prefix}/style.css"`)
-    .replaceAll('src="/app.js', `src="${prefix}/app.js`)
-    .replaceAll('src="/portal.js"', `src="${prefix}/portal.js"`)
-    .replaceAll('href="/LANDING_PAGE_TYPE_RULES.md"', `href="${prefix}/LANDING_PAGE_TYPE_RULES.md"`);
-}
-
-function copyProxyHeaders(sourceHeaders, contentType) {
-  const headers = {};
-  for (const [key, value] of sourceHeaders.entries()) {
-    const lower = key.toLowerCase();
-    if (["connection", "content-encoding", "content-length", "keep-alive", "transfer-encoding"].includes(lower)) continue;
-    headers[key] = value;
-  }
-  if (contentType) headers["content-type"] = contentType;
-  headers["cache-control"] = "no-store";
-  return headers;
-}
-
-function readRequestBuffer(req) {
+function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on("data", (chunk) => chunks.push(chunk));
-    req.on("end", () => resolve(Buffer.concat(chunks)));
+    let size = 0;
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > maxBodyBytes) {
+        reject(new Error("上传内容太大，请压缩图片后重试。"));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     req.on("error", reject);
   });
 }
 
-async function proxyMountedTool(req, res, tool, pathname) {
-  if (!(await ensureToolStarted(tool))) {
-    sendJson(res, 503, { error: `${tool.name} 启动中，请稍后重试。` });
-    return;
+function dataUrlToBlob(dataUrl, fallbackName) {
+  const match = /^data:(.+?);base64,(.+)$/.exec(dataUrl || "");
+  if (!match) throw new Error(`${fallbackName} 不是有效图片。`);
+  const mime = match[1];
+  const extension = mime.split("/")[1]?.replace("jpeg", "jpg") || "png";
+  const bytes = Buffer.from(match[2], "base64");
+  return {
+    blob: new Blob([bytes], { type: mime }),
+    filename: `${fallbackName}.${extension}`
+  };
+}
+
+function normalizeBaseUrl(value) {
+  const baseUrl = String(value || process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").trim();
+  return baseUrl.replace(/\/+$/, "");
+}
+
+async function fileToBlob(filePath, mime, filename) {
+  const bytes = await readFile(filePath);
+  return {
+    blob: new Blob([bytes], { type: mime }),
+    filename
+  };
+}
+
+function buildPortraitPrompt(fields) {
+  return `一张极具视觉冲击力的3D商业广告海报，比例3:4，大师级的3d渲染，材质清晰明确，整体光线柔和明亮，具有C4D和Blender渲染的顶级质感，色彩高饱和度，活泼、科技、年轻化，8k分辨率，极致细节。产品和标题突出：产品组合位于画面中心偏下，标题位于画面正中偏上。环境简洁，环境完全不抢，突出主体。产品是画面当之无愧的中心和焦点。整体冷暖和谐。画面采用「${fields.mainTone}」作为主色调背景。请根据「${fields.environmentScene}」自动联想并扩写合适的环境氛围，让画面情绪自然、具体、有季节感。
+
+构图上：
+产品组合位于画面中心偏下，圆润阶梯展台错落排布。请先严格识别上传产品六面图中的独立产品数量，并只呈现相同数量的产品：如果参考图中只有 1 个产品，海报中只能出现 1 个产品主体，禁止额外添加音箱、摄像头、屏幕、闹钟或任何其他智能家居产品；如果参考图中有多个产品，才可以完整呈现对应数量的多个产品。请严格参考上传的产品六面图：保持产品造型、大小比例和数量逻辑，调整产品透视和环境光，使其自然融入新场景。该参考图用于控制产品之间的比例；如果有多个产品，会在白底图上放置多个。最高的产品位于中央，其他产品在两侧，产品之间互不遮挡，上下前后高低错落，像电商商品陈列一样精致合理。除了墨镜产品之外，其他产品都要落地。所有产品外观严格参考产品六面图，不要凭空生成参考图之外的新产品。
+
+标题位于画面正中偏上。主标题文字为「${fields.mainTitle}」，几个大字，字体为「手写」风格，艺术字设计。副标题文字为「${fields.subTitle}」，位于主标题下方，带有简约飘带或托底结构，与主标题组合和谐。标题颜色为「${fields.titleColor}」，文字颜色需要简洁突出、清晰可读，如果背景深色则使用浅色标题，如果背景浅色则使用深色标题。
+
+环境为简约的「${fields.environmentScene}」，细节精致但完全不抢主体，背景为简单渐变色，保证标题突出。整体青春活泼。空中漂浮着粉色的简约小「${fields.floatingElement}」，颜色和谐，体现空间感和镜头感，有一定视觉冲击力。
+
+画面中加入一个小度机器人吉祥物，严格参考内置机器人参考图。保持机器人角色完全不变，不要改造它的身体比例、脸部屏幕、眼睛形态、材质和轮廓；注意它无手、无脚、无腿，没有手指，呈现悬浮状态。该角色可以身着符合环境特色的轻量服饰，但服饰不能改变机器人本体结构，整体生动俏皮，不要抢占产品主体。`;
+}
+
+function buildLandscapePrompt(fields) {
+  return `一张极具视觉冲击力的3D商业广告横版 KV，比例${fields.aspectRatio || "1:2"}，宽幅横向构图，大师级的3d渲染，材质清晰明确，整体光线柔和明亮，具有C4D和Blender渲染的顶级质感，色彩高饱和度，活泼、科技、年轻化，8k分辨率，极致细节。整体冷暖和谐。画面采用「${fields.mainTone || ""}」作为主色调背景。请根据「${fields.environmentScene || ""}」自动联想并扩写合适的环境氛围，让画面情绪自然、具体、有季节感。
+
+横版构图必须清晰分区：标题文字位于画面左侧，占据左侧视觉区域；产品组合位于画面右侧偏中下，是横版画面的商业主体。白色小度机器人位于产品堆品台右侧，白色机器角色的完整高度必须小于或等于整张画面高度的三分之一。
+
+产品组合位于画面右侧偏中下，圆润阶梯展台错落排布。请先严格识别上传产品白底图中的独立产品数量，并只呈现相同数量的产品：如果参考图中只有 1 个产品，海报中只能出现 1 个产品主体，禁止额外添加音箱、摄像头、屏幕、闹钟或任何其他智能家居产品；如果参考图中有多个产品，才可以完整呈现对应数量的多个产品。请严格参考上传的产品白底图：保持产品造型、大小比例和数量逻辑，调整产品透视和环境光，使其自然融入新场景。该参考图用于控制产品之间的比例；如果有多个产品，会在白底图上放置多个。产品之间互不遮挡，上下前后高低错落，像电商商品陈列一样精致合理。除了墨镜产品之外，其他产品都要落地。所有产品外观严格参考产品白底图，不要凭空生成参考图之外的新产品。
+
+标题位于画面左侧。主标题文字为「${fields.mainTitle || ""}」，几个大字，字体为「手写」风格，艺术字设计，左侧大标题要醒目、清晰、留有呼吸感。副标题文字为「${fields.subTitle || ""}」，位于主标题下方，带有简约飘带或托底结构，与主标题组合和谐。标题颜色为「${fields.titleColor || ""}」，文字颜色需要简洁突出、清晰可读，如果背景深色则使用浅色标题，如果背景浅色则使用深色标题。干净粗壮紧凑的手写字效果，笔触边缘清爽，不产生脏污笔刷、灰色雾边或背景残影，文字没有任何投影在背景上。标题背后必须保持干净通透，不允许灰色阴影、脏污笔刷、杂乱飞溅、噪点纹理或多余托底；标题不许有任何形式的阴影或投影投在背景上，仅靠标题颜色与背景形成区分。
+
+环境为简约的「${fields.environmentScene || ""}」，细节精致但完全不抢主体，背景为简单渐变色，保证标题突出。整体青春活泼。空中漂浮着粉色的简约小「${fields.floatingElement || ""}」，颜色和谐，体现空间感和镜头感，有一定视觉冲击力。
+
+画面中加入一个小度机器人吉祥物，严格参考内置机器人参考图。机器人位于产品堆品台右侧，完整高度不得大于画面高度的三分之一。保持机器人角色完全不变，不要改造它的身体比例、脸部屏幕、眼睛形态、材质和轮廓；注意它无手、无脚、无腿，没有手指，呈现悬浮状态。该角色可以身着符合环境特色的轻量服饰，但服饰不能改变机器人本体结构，整体生动俏皮，不要抢占产品主体。底部离开展台一点点，呈现轻微悬浮，底部有淡淡蓝色尾焰。`;
+}
+
+function buildPrompt(fields) {
+  return fields.layout === "landscape" ? buildLandscapePrompt(fields) : buildPortraitPrompt(fields);
+}
+
+function sizeForRatio(ratio, layout) {
+  return ratioSizes[ratio] || ratioSizes[defaultRatios[layout] || defaultRatios.portrait];
+}
+
+async function fetchOpenAI(url, options, attempts = 3) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) break;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
+    }
   }
-  let upstreamPath = pathname.slice(tool.mountPath.length) || "/";
-  if (upstreamPath === "/" && tool.path !== "/") upstreamPath = tool.path;
-  const targetUrl = new URL(upstreamPath, `http://127.0.0.1:${tool.port}`);
-  targetUrl.search = new URL(req.url, `http://${req.headers.host}`).search;
+  throw lastError;
+}
 
-  const headers = new Headers(req.headers);
-  headers.delete("host");
-  headers.delete("connection");
-  headers.delete("content-length");
-  headers.set("host", `127.0.0.1:${tool.port}`);
+async function runGenerate(body) {
+  const apiKey = String(body.apiKey || process.env.OPENAI_API_KEY || "").trim();
+  const apiBaseUrl = normalizeBaseUrl(body.apiBaseUrl);
+  const prompt = buildPrompt(body.fields || {});
+  const model = body.model || process.env.OPENAI_IMAGE_MODEL || "gpt-image-2-1K";
+  const layout = body.layout || body.fields?.layout || "portrait";
+  const aspectRatio = body.aspectRatio || body.fields?.aspectRatio || defaultRatios[layout] || defaultRatios.portrait;
+  const size = body.size || sizeForRatio(aspectRatio, layout);
+  const quality = body.quality || "medium";
+  const outputFormat = body.outputFormat || "png";
+  const form = new FormData();
+  const product = body.productImage
+    ? dataUrlToBlob(body.productImage, "product-reference")
+    : await fileToBlob(defaultProductPath, "image/png", "product-reference.png");
+  const robotPath = layout === "landscape" && existsSync(landscapeRobotPath) ? landscapeRobotPath : defaultRobotPath;
+  const robot = await fileToBlob(robotPath, "image/png", "robot-reference.png");
 
-  const body = ["GET", "HEAD"].includes(req.method) ? undefined : await readRequestBuffer(req);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
-  let upstream;
+  form.append("model", model);
+  form.append("prompt", prompt);
+  form.append("size", size);
+  form.append("quality", quality);
+  form.append("output_format", outputFormat);
+  form.append("image[]", product.blob, product.filename);
+  form.append("image[]", robot.blob, robot.filename);
+
+  const upstream = await fetchOpenAI(`${apiBaseUrl}/images/edits`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form
+  });
+  let result = {};
   try {
-    upstream = await fetch(targetUrl, { method: req.method, headers, body, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
+    result = await upstream.json();
+  } catch {
+    result = {};
   }
-  const contentType = upstream.headers.get("content-type") || "";
-
-  if (
-    contentType.includes("text/html") ||
-    contentType.includes("application/javascript") ||
-    contentType.includes("text/css") ||
-    contentType.includes("application/json")
-  ) {
-    const text = rewriteToolText(await upstream.text(), tool);
-    res.writeHead(upstream.status, copyProxyHeaders(upstream.headers, contentType));
-    res.end(text);
-    return;
+  if (!upstream.ok) {
+    const error = new Error(normalizeGenerateError(result?.error?.message, upstream.status));
+    error.status = upstream.status;
+    throw error;
   }
 
-  const bytes = Buffer.from(await upstream.arrayBuffer());
-  res.writeHead(upstream.status, copyProxyHeaders(upstream.headers, contentType));
-  res.end(bytes);
+  const firstImage = result?.data?.[0] || {};
+  const imageBase64 = firstImage.b64_json || firstImage.base64 || firstImage.image_base64;
+  const imageUrl = firstImage.url || firstImage.image_url;
+  if (!imageBase64 && imageUrl) {
+    const imageResponse = await fetchOpenAI(imageUrl, { method: "GET" });
+    if (!imageResponse.ok) {
+      return {
+        image: imageUrl,
+        downloadUrl: imageUrl,
+        prompt,
+        usage: result.usage || null,
+        model
+      };
+    }
+    const contentType = imageResponse.headers.get("content-type") || `image/${outputFormat}`;
+    const bytes = Buffer.from(await imageResponse.arrayBuffer());
+    const id = crypto.randomUUID();
+    const extension = contentType.includes("jpeg") ? "jpg" : outputFormat;
+    const filename = `${id}.${extension}`;
+    const filePath = path.join(outputDir, filename);
+    await new Promise((resolve, reject) => {
+      const stream = createWriteStream(filePath);
+      stream.on("finish", resolve);
+      stream.on("error", reject);
+      stream.end(bytes);
+    });
+    const imageData = `data:${contentType};base64,${bytes.toString("base64")}`;
+    return {
+      image: imageData,
+      downloadUrl: `/outputs/${filename}`,
+      prompt,
+      usage: result.usage || null,
+      model
+    };
+  }
+  if (!imageBase64) {
+    throw new Error(`接口没有返回可识别的图片数据。返回字段：${Object.keys(firstImage).join(", ") || "无"}`);
+  }
+
+  const id = crypto.randomUUID();
+  const filename = `${id}.${outputFormat}`;
+  const filePath = path.join(outputDir, filename);
+  const bytes = Buffer.from(imageBase64, "base64");
+  await new Promise((resolve, reject) => {
+    const stream = createWriteStream(filePath);
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+    stream.end(bytes);
+  });
+
+  return {
+    image: `data:image/${outputFormat};base64,${imageBase64}`,
+    downloadUrl: `/outputs/${filename}`,
+    prompt,
+    usage: result.usage || null,
+    model
+  };
+}
+
+async function handleGenerate(req, res) {
+  try {
+    if (!isAuthorized(req)) return sendJson(res, 401, { error: "请先输入访问密码。" });
+    if (!checkUsage(req)) return sendJson(res, 429, { error: `今日生成次数已达上限（${dailyLimit} 次）。` });
+    const body = JSON.parse(await readBody(req));
+    const apiKey = String(body.apiKey || process.env.OPENAI_API_KEY || "").trim();
+    if (!apiKey) return sendJson(res, 400, { error: "请填写 OpenAI API Key，或让服务端配置 OPENAI_API_KEY。" });
+    if (!body.productImage && !existsSync(defaultProductPath)) {
+      return sendJson(res, 400, { error: "请上传产品白底图，或补齐内置产品参考图。" });
+    }
+    if (!existsSync(defaultRobotPath)) {
+      return sendJson(res, 500, { error: "内置机器人参考图缺失，请补齐 assets/robot-reference.png。" });
+    }
+
+    const job = createJob();
+    sendJson(res, 202, { jobId: job.id, status: job.status });
+
+    queueMicrotask(async () => {
+      job.status = "running";
+      job.updatedAt = Date.now();
+      try {
+        job.result = await runGenerate(body);
+        job.status = "completed";
+      } catch (error) {
+        const cause = error.cause?.code || error.cause?.message;
+        const detail = cause ? `${error.message}（${cause}）` : error.message;
+        job.error = normalizeGenerateError(detail, error.status || 500);
+        job.status = "error";
+      } finally {
+        job.updatedAt = Date.now();
+      }
+    });
+  } catch (error) {
+    const cause = error.cause?.code || error.cause?.message;
+    const detail = cause ? `${error.message}（${cause}）` : error.message;
+    sendJson(res, 500, { error: normalizeGenerateError(detail, 500) });
+  }
+}
+
+async function handleGenerateStatus(req, res, jobId) {
+  if (!isAuthorized(req)) return sendJson(res, 401, { error: "请先输入访问密码。" });
+  const job = generateJobs.get(jobId);
+  if (!job) return sendJson(res, 404, { error: "未找到生成任务，请重新生成。" });
+  sendJson(res, 200, {
+    jobId: job.id,
+    status: job.status,
+    result: job.result,
+    error: job.error,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt
+  });
 }
 
 async function handleUnlock(req, res) {
   try {
     if (!accessPassword) return sendJson(res, 200, { ok: true });
-    const body = JSON.parse(await readRequestBuffer(req));
-    if (String(body.password || "") !== accessPassword) {
-      return sendJson(res, 401, { error: "访问密码不正确。" });
-    }
+    const body = JSON.parse(await readBody(req));
+    if (String(body.password || "") !== accessPassword) return sendJson(res, 401, { error: "访问密码不正确。" });
     const sessionId = crypto.randomUUID();
     sessions.set(sessionId, { createdAt: Date.now() });
     res.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
-      "Set-Cookie": `gtm_workbench_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+      "Set-Cookie": `kv_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
       "Cache-Control": "no-store"
     });
     res.end(JSON.stringify({ ok: true }));
@@ -307,123 +400,60 @@ async function handleUnlock(req, res) {
   }
 }
 
-async function handleFormUnlock(req, res) {
-  try {
-    if (!accessPassword) {
-      res.writeHead(303, { Location: "/#landing", "Cache-Control": "no-store" });
-      res.end();
-      return;
-    }
-
-    const body = new URLSearchParams((await readRequestBuffer(req)).toString("utf8"));
-    if (String(body.get("password") || "") !== accessPassword) {
-      res.writeHead(303, { Location: "/?error=1", "Cache-Control": "no-store" });
-      res.end();
-      return;
-    }
-
-    const sessionId = crypto.randomUUID();
-    sessions.set(sessionId, { createdAt: Date.now() });
-    res.writeHead(303, {
-      Location: "/#landing",
-      "Set-Cookie": `gtm_workbench_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
-      "Cache-Control": "no-store"
-    });
-    res.end();
-  } catch {
-    res.writeHead(303, { Location: "/?error=1", "Cache-Control": "no-store" });
-    res.end();
-  }
-}
-
 async function serveStatic(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = decodeURIComponent(url.pathname);
-  const safePath = pathname === "/" ? "/index.html" : pathname;
-  if (safePath === "/index.html") {
-    await serveIndex(req, res);
-    return;
+  let filePath;
+  if (pathname.startsWith("/outputs/")) {
+    filePath = path.join(outputDir, pathname.replace("/outputs/", ""));
+  } else {
+    const safePath = pathname === "/" ? "/index.html" : pathname;
+    filePath = path.join(publicDir, safePath);
   }
-  const filePath = path.join(publicDir, safePath);
-  if (!filePath.startsWith(publicDir)) {
+  if (!filePath.startsWith(publicDir) && !filePath.startsWith(outputDir)) {
     res.writeHead(403);
     res.end("Forbidden");
     return;
   }
   try {
     const data = await readFile(filePath);
-    const extension = path.extname(filePath).toLowerCase();
     res.writeHead(200, {
-      "Content-Type": mimeTypes[extension] || "application/octet-stream",
-      "Cache-Control": [".html", ".js", ".css"].includes(extension) ? "no-store" : "public, max-age=300"
+      "Content-Type": mimeTypes[path.extname(filePath).toLowerCase()] || "application/octet-stream"
     });
-    res.end(req.method === "HEAD" ? "" : data);
+    res.end(data);
   } catch {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-    res.end(req.method === "HEAD" ? "" : "Not found");
+    res.end("Not found");
   }
 }
 
 const server = http.createServer(async (req, res) => {
-  try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const mountedTool = getMountedTool(decodeURIComponent(url.pathname));
-    if (mountedTool) {
-      if (!isAuthorized(req)) {
-        sendLocked(req, res);
-        return;
-      }
-      await proxyMountedTool(req, res, mountedTool, decodeURIComponent(url.pathname));
-      return;
-    }
-    if (req.method === "GET" && url.pathname === "/api/auth-status") {
-      sendJson(res, 200, { locked: Boolean(accessPassword), authorized: isAuthorized(req) });
-      return;
-    }
-    if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/healthz") {
-      sendJson(res, 200, { ok: true }, req.method);
-      return;
-    }
-    if (req.method === "POST" && url.pathname === "/api/unlock") {
-      await handleUnlock(req, res);
-      return;
-    }
-    if (req.method === "POST" && url.pathname === "/unlock") {
-      await handleFormUnlock(req, res);
-      return;
-    }
-    if (req.method === "GET" && url.pathname === "/api/tools") {
-      if (!isAuthorized(req)) {
-        sendLocked(req, res);
-        return;
-      }
-      const statuses = await Promise.all(tools.map(async (tool) => ({
-        id: tool.id,
-        name: tool.name,
-        copiedUrl: mountedToolUrl(tool),
-        directCopyUrl: toolUrl(tool),
-        sourceUrl: tool.sourceUrl,
-        status: await checkTool(tool)
-      })));
-      sendJson(res, 200, { tools: statuses });
-      return;
-    }
-    if (req.method === "GET" || req.method === "HEAD") {
-      await serveStatic(req, res);
-      return;
-    }
-    res.writeHead(405);
-    res.end("Method not allowed");
-  } catch (error) {
-    console.error(error);
-    if (!res.headersSent) {
-      sendJson(res, 500, { error: "服务暂时不可用，请稍后重试。" });
-    } else {
-      res.end();
-    }
+  if (req.method === "POST" && req.url === "/api/unlock") {
+    await handleUnlock(req, res);
+    return;
   }
+  if (req.method === "GET" && req.url === "/api/auth-status") {
+    sendJson(res, 200, { locked: Boolean(accessPassword), authorized: isAuthorized(req) });
+    return;
+  }
+  if (req.method === "POST" && req.url === "/api/generate") {
+    await handleGenerate(req, res);
+    return;
+  }
+  if (req.method === "GET" && req.url.startsWith("/api/generate/")) {
+    await handleGenerateStatus(req, res, decodeURIComponent(req.url.replace("/api/generate/", "")));
+    return;
+  }
+  if (req.method === "GET") {
+    await serveStatic(req, res);
+    return;
+  }
+  res.writeHead(405);
+  res.end("Method not allowed");
 });
 
-server.listen(port, host, () => {
-  process.stdout?.write(`GTM combined workbench running on ${host}:${port}\n`);
+server.listen(port, () => {
+  if (process.stdout?.writable) {
+    process.stdout.write(`Poster generator running at http://127.0.0.1:${port}\n`);
+  }
 });

@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>产品海报一键生成</title>
-    <link rel="stylesheet" href="styles.css?v=20260707-aggregate-module-align" />
+    <title>聚合 KV 一键生成小工具</title>
+    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <section id="lockScreen" class="lock-screen" hidden>
       <form id="unlockForm" class="lock-panel">
         <p class="eyebrow">Private Access</p>
         <h2>请输入访问密码</h2>
-        <p>这是内部测试链接，验证后即可使用产品海报一键生成工具。</p>
+        <p>这是内部测试链接，验证后即可使用聚合 KV 生成工具。</p>
         <label class="field">
           <span class="field-label">访问密码</span>
           <input id="accessPassword" type="password" autocomplete="current-password" />
@@ -26,20 +26,19 @@
         <div class="hero-copy">
           <p class="eyebrow">DUX自研</p>
           <div class="title-row">
-            <h1>产品海报一键生成</h1>
-            <span class="version-badge">2.0</span>
+            <h1>私域产品海报 一键生成工具</h1>
+            <span class="version-badge">2.1版本</span>
+          </div>
+          <div class="hero-layout-control" aria-label="画面方向">
+            <input id="layoutMode" type="hidden" name="layout" value="portrait" form="posterForm" />
+            <button class="layout-option is-active" type="button" data-layout-option="portrait">竖版<span class="option-note">（效果更好）</span></button>
+            <button class="layout-option" type="button" data-layout-option="landscape">横版</button>
           </div>
         </div>
       </section>
 
       <section class="workspace">
         <form id="posterForm" class="panel form-panel">
-          <div class="hero-layout-control" aria-label="画面方向">
-            <input id="layoutMode" type="hidden" name="layout" value="portrait" form="posterForm" />
-            <button class="layout-option is-active" type="button" data-layout-option="portrait">竖版<span class="option-note">（效果更好）</span></button>
-            <button class="layout-option" type="button" data-layout-option="landscape">横版</button>
-          </div>
-
           <div class="section-head">
             <div class="step-badge">1</div>
             <div>
@@ -139,7 +138,7 @@
           <div class="result-frame">
             <div id="emptyState" class="empty-state">
               <strong>等待生成</strong>
-              <span>生成完成后，结果会出现在这里。</span>
+              <span>可直接生成，也可上传产品图后生成。</span>
             </div>
             <button id="previewButton" class="result-preview-button" type="button" aria-label="查看大图" hidden>
               <img id="resultImage" alt="生成的运营聚合 KV" />
@@ -153,7 +152,6 @@
       <button id="modalClose" class="modal-close" type="button" aria-label="关闭大图">×</button>
       <img id="modalImage" alt="生成的运营聚合 KV 大图" />
     </div>
-    <script src="fit-frame.js?v=20260707-result-copy-final"></script>
-    <script src="app.js?v=20260707-result-copy-final"></script>
+    <script src="/app.js?v=20260625-waiting"></script>
   </body>
 </html>
