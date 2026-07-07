@@ -12,10 +12,19 @@ dns.setDefaultResultOrder("ipv4first");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
 const logsDir = path.join(__dirname, "logs");
-const port = Number(process.env.PORT || 4174);
+const port = Number(process.env.PORT || 10000);
 const host = "0.0.0.0";
 const accessPassword = String(process.env.ACCESS_PASSWORD || "DUUE123").trim();
 const sessions = new Map();
+
+function parsePortList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => Number(item.trim()))
+    .filter((item) => Number.isInteger(item) && item > 0 && item < 65536);
+}
+
+const listenPorts = [...new Set([port, ...parsePortList(process.env.EXTRA_HTTP_PORTS || "4174,10000")])];
 
 if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
 
@@ -360,7 +369,7 @@ async function serveStatic(req, res) {
   }
 }
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req, res) {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const mountedTool = getMountedTool(decodeURIComponent(url.pathname));
@@ -418,8 +427,14 @@ const server = http.createServer(async (req, res) => {
       res.end();
     }
   }
-});
+}
 
-server.listen(port, host, () => {
-  process.stdout?.write(`GTM combined workbench running at http://127.0.0.1:${port}\n`);
-});
+for (const listenPort of listenPorts) {
+  const server = http.createServer(handleRequest);
+  server.on("error", (error) => {
+    process.stderr?.write(`Unable to listen on ${host}:${listenPort}: ${error.message}\n`);
+  });
+  server.listen(listenPort, host, () => {
+    process.stdout?.write(`GTM combined workbench running on ${host}:${listenPort}\n`);
+  });
+}
