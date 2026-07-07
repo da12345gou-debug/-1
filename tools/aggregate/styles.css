@@ -1792,6 +1792,14 @@ textarea {
   text-align: center !important;
 }
 
+.result-frame.has-result .empty-state {
+  display: none !important;
+}
+
+.result-frame.has-result .result-preview-button {
+  grid-area: 1 / 1 !important;
+}
+
 .result-preview-button[hidden],
 #previewButton[hidden],
 .download-link[hidden],

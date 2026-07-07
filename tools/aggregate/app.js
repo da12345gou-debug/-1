@@ -205,6 +205,7 @@ function restoreButton() {
 }
 
 function showResult(result) {
+  resultFrame?.classList.add("has-result");
   resultImage.src = result.image;
   modalImage.src = result.image;
   previewButton.hidden = false;
@@ -388,6 +389,7 @@ productInput.addEventListener("change", () => previewFile(productInput, productP
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   updatePrompt();
+  resultFrame?.classList.remove("has-result");
 
   const productFile = productInput.files?.[0];
 
