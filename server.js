@@ -50,7 +50,6 @@ const tools = [
 ];
 
 const children = new Map();
-const startupPromises = [];
 
 function toolUrl(tool) {
   return `http://127.0.0.1:${tool.port}${tool.path}`;
@@ -58,6 +57,10 @@ function toolUrl(tool) {
 
 function mountedToolUrl(tool) {
   return `${tool.mountPath}/`;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function isToolListening(tool) {
@@ -75,6 +78,8 @@ async function isToolListening(tool) {
 
 async function startTool(tool) {
   if (!existsSync(path.join(tool.cwd, "server.js"))) return;
+  const existing = children.get(tool.id);
+  if (existing && !existing.killed) return;
   if (await isToolListening(tool)) return;
   const out = createWriteStream(path.join(logsDir, `${tool.id}.out.log`), { flags: "a" });
   const err = createWriteStream(path.join(logsDir, `${tool.id}.err.log`), { flags: "a" });
@@ -94,7 +99,15 @@ async function startTool(tool) {
   children.set(tool.id, child);
 }
 
-for (const tool of tools) startupPromises.push(startTool(tool));
+async function ensureToolStarted(tool) {
+  if (await isToolListening(tool)) return true;
+  await startTool(tool);
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    await wait(150);
+    if (await isToolListening(tool)) return true;
+  }
+  return false;
+}
 
 function stopChildren() {
   for (const child of children.values()) {
@@ -227,6 +240,10 @@ function readRequestBuffer(req) {
 }
 
 async function proxyMountedTool(req, res, tool, pathname) {
+  if (!(await ensureToolStarted(tool))) {
+    sendJson(res, 503, { error: `${tool.name} 启动中，请稍后重试。` });
+    return;
+  }
   let upstreamPath = pathname.slice(tool.mountPath.length) || "/";
   if (upstreamPath === "/" && tool.path !== "/") upstreamPath = tool.path;
   const targetUrl = new URL(upstreamPath, `http://127.0.0.1:${tool.port}`);
@@ -239,7 +256,14 @@ async function proxyMountedTool(req, res, tool, pathname) {
   headers.set("host", `127.0.0.1:${tool.port}`);
 
   const body = ["GET", "HEAD"].includes(req.method) ? undefined : await readRequestBuffer(req);
-  const upstream = await fetch(targetUrl, { method: req.method, headers, body });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  let upstream;
+  try {
+    upstream = await fetch(targetUrl, { method: req.method, headers, body, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
   const contentType = upstream.headers.get("content-type") || "";
 
   if (
@@ -337,54 +361,63 @@ async function serveStatic(req, res) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const mountedTool = getMountedTool(decodeURIComponent(url.pathname));
-  if (mountedTool) {
-    if (!isAuthorized(req)) {
-      sendLocked(req, res);
+  try {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const mountedTool = getMountedTool(decodeURIComponent(url.pathname));
+    if (mountedTool) {
+      if (!isAuthorized(req)) {
+        sendLocked(req, res);
+        return;
+      }
+      await proxyMountedTool(req, res, mountedTool, decodeURIComponent(url.pathname));
       return;
     }
-    await proxyMountedTool(req, res, mountedTool, decodeURIComponent(url.pathname));
-    return;
-  }
-  if (req.method === "GET" && url.pathname === "/api/auth-status") {
-    sendJson(res, 200, { locked: Boolean(accessPassword), authorized: isAuthorized(req) });
-    return;
-  }
-  if (req.method === "GET" && url.pathname === "/healthz") {
-    sendJson(res, 200, { ok: true });
-    return;
-  }
-  if (req.method === "POST" && url.pathname === "/api/unlock") {
-    await handleUnlock(req, res);
-    return;
-  }
-  if (req.method === "POST" && url.pathname === "/unlock") {
-    await handleFormUnlock(req, res);
-    return;
-  }
-  if (req.method === "GET" && url.pathname === "/api/tools") {
-    if (!isAuthorized(req)) {
-      sendLocked(req, res);
+    if (req.method === "GET" && url.pathname === "/api/auth-status") {
+      sendJson(res, 200, { locked: Boolean(accessPassword), authorized: isAuthorized(req) });
       return;
     }
-    const statuses = await Promise.all(tools.map(async (tool) => ({
-      id: tool.id,
-      name: tool.name,
-      copiedUrl: mountedToolUrl(tool),
-      directCopyUrl: toolUrl(tool),
-      sourceUrl: tool.sourceUrl,
-      status: await checkTool(tool)
-    })));
-    sendJson(res, 200, { tools: statuses });
-    return;
+    if (req.method === "GET" && url.pathname === "/healthz") {
+      sendJson(res, 200, { ok: true });
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/api/unlock") {
+      await handleUnlock(req, res);
+      return;
+    }
+    if (req.method === "POST" && url.pathname === "/unlock") {
+      await handleFormUnlock(req, res);
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/tools") {
+      if (!isAuthorized(req)) {
+        sendLocked(req, res);
+        return;
+      }
+      const statuses = await Promise.all(tools.map(async (tool) => ({
+        id: tool.id,
+        name: tool.name,
+        copiedUrl: mountedToolUrl(tool),
+        directCopyUrl: toolUrl(tool),
+        sourceUrl: tool.sourceUrl,
+        status: await checkTool(tool)
+      })));
+      sendJson(res, 200, { tools: statuses });
+      return;
+    }
+    if (req.method === "GET") {
+      await serveStatic(req, res);
+      return;
+    }
+    res.writeHead(405);
+    res.end("Method not allowed");
+  } catch (error) {
+    console.error(error);
+    if (!res.headersSent) {
+      sendJson(res, 500, { error: "服务暂时不可用，请稍后重试。" });
+    } else {
+      res.end();
+    }
   }
-  if (req.method === "GET") {
-    await serveStatic(req, res);
-    return;
-  }
-  res.writeHead(405);
-  res.end("Method not allowed");
 });
 
 server.listen(port, host, () => {
