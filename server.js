@@ -17,15 +17,6 @@ const host = "0.0.0.0";
 const accessPassword = String(process.env.ACCESS_PASSWORD || "DUUE123").trim();
 const sessions = new Map();
 
-function parsePortList(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => Number(item.trim()))
-    .filter((item) => Number.isInteger(item) && item > 0 && item < 65536);
-}
-
-const listenPorts = [...new Set([port, ...parsePortList(process.env.EXTRA_HTTP_PORTS || "4174,10000")])];
-
 if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
 
 const tools = [
@@ -138,12 +129,12 @@ const mimeTypes = {
   ".svg": "image/svg+xml"
 };
 
-function sendJson(res, status, payload) {
+function sendJson(res, status, payload, method = "GET") {
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store"
   });
-  res.end(JSON.stringify(payload));
+  res.end(method === "HEAD" ? "" : JSON.stringify(payload));
 }
 
 function parseCookies(req) {
@@ -189,6 +180,10 @@ async function serveIndex(req, res) {
     "Content-Type": "text/html; charset=utf-8",
     "Cache-Control": "no-store"
   });
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
   res.end(template.replace("__AUTH_STATE__", JSON.stringify(authState).replaceAll("<", "\\u003c")));
 }
 
@@ -362,14 +357,14 @@ async function serveStatic(req, res) {
       "Content-Type": mimeTypes[extension] || "application/octet-stream",
       "Cache-Control": [".html", ".js", ".css"].includes(extension) ? "no-store" : "public, max-age=300"
     });
-    res.end(data);
+    res.end(req.method === "HEAD" ? "" : data);
   } catch {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-    res.end("Not found");
+    res.end(req.method === "HEAD" ? "" : "Not found");
   }
 }
 
-async function handleRequest(req, res) {
+const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const mountedTool = getMountedTool(decodeURIComponent(url.pathname));
@@ -385,8 +380,8 @@ async function handleRequest(req, res) {
       sendJson(res, 200, { locked: Boolean(accessPassword), authorized: isAuthorized(req) });
       return;
     }
-    if (req.method === "GET" && url.pathname === "/healthz") {
-      sendJson(res, 200, { ok: true });
+    if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/healthz") {
+      sendJson(res, 200, { ok: true }, req.method);
       return;
     }
     if (req.method === "POST" && url.pathname === "/api/unlock") {
@@ -413,7 +408,7 @@ async function handleRequest(req, res) {
       sendJson(res, 200, { tools: statuses });
       return;
     }
-    if (req.method === "GET") {
+    if (req.method === "GET" || req.method === "HEAD") {
       await serveStatic(req, res);
       return;
     }
@@ -427,14 +422,8 @@ async function handleRequest(req, res) {
       res.end();
     }
   }
-}
+});
 
-for (const listenPort of listenPorts) {
-  const server = http.createServer(handleRequest);
-  server.on("error", (error) => {
-    process.stderr?.write(`Unable to listen on ${host}:${listenPort}: ${error.message}\n`);
-  });
-  server.listen(listenPort, host, () => {
-    process.stdout?.write(`GTM combined workbench running on ${host}:${listenPort}\n`);
-  });
-}
+server.listen(port, host, () => {
+  process.stdout?.write(`GTM combined workbench running on ${host}:${port}\n`);
+});
