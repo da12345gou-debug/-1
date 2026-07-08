@@ -21,7 +21,7 @@ const skipAuth = process.env.COMBINED_WORKBENCH === "1";
 await loadDotEnv(path.join(__dirname, ".env"));
 await loadSiblingEnvWithKey();
 
-const accessPassword = String(process.env.ACCESS_PASSWORD || "DUUE123").trim();
+const accessPassword = String(process.env.ACCESS_PASSWORD || "DUUE2026").trim();
 const dailyLimit = Number(process.env.DAILY_LIMIT || 20);
 if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
 
