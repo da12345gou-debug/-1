@@ -14,7 +14,7 @@ const publicDir = path.join(__dirname, "public");
 const logsDir = path.join(__dirname, "logs");
 const port = Number(process.env.PORT || 10000);
 const host = "0.0.0.0";
-const accessPassword = String(process.env.ACCESS_PASSWORD || "DUUE2026").trim();
+const accessPassword = String(process.env.WORKBENCH_ACCESS_PASSWORD || "DUUE2026").trim();
 const sessions = new Map();
 
 if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
