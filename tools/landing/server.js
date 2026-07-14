@@ -11,7 +11,7 @@ dns.setDefaultResultOrder("ipv4first");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
 const portalPath = path.join(publicDir, "portal.html");
-const outputDir = path.join(__dirname, "outputs");
+const outputDir = path.resolve(process.env.OUTPUT_DIR || path.join(__dirname, "outputs"));
 const uploadDir = path.join(__dirname, "uploads");
 const rulesPath = path.join(__dirname, "LANDING_PAGE_TYPE_RULES.md");
 const port = Number(process.env.PORT || 4174);

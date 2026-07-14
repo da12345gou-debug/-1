@@ -1,6 +1,6 @@
 ﻿import http from "node:http";
-import { readFile } from "node:fs/promises";
-import { createWriteStream, existsSync, mkdirSync } from "node:fs";
+import { readFile, readdir, stat as statFile } from "node:fs/promises";
+import { createReadStream, createWriteStream, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ dns.setDefaultResultOrder("ipv4first");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
 const logsDir = path.join(__dirname, "logs");
+const generatedOutputRoot = path.resolve(process.env.GENERATED_OUTPUT_ROOT || path.join(__dirname, "generated-images"));
 const port = Number(process.env.PORT || 10000);
 const host = "0.0.0.0";
 const accessPassword = String(process.env.WORKBENCH_ACCESS_PASSWORD || "DUUE2026").trim();
@@ -22,6 +23,7 @@ const sessions = new Map();
 const usageByDate = new Map();
 
 if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
+if (!existsSync(generatedOutputRoot)) mkdirSync(generatedOutputRoot, { recursive: true });
 
 const tools = [
   {
@@ -54,6 +56,7 @@ const tools = [
 ];
 
 const children = new Map();
+const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 
 function toolUrl(tool) {
   return `http://127.0.0.1:${tool.port}${tool.path}`;
@@ -61,6 +64,110 @@ function toolUrl(tool) {
 
 function mountedToolUrl(tool) {
   return `${tool.mountPath}/`;
+}
+
+function toolOutputDir(tool) {
+  return path.join(generatedOutputRoot, tool.id);
+}
+
+function legacyToolOutputDir(tool) {
+  return path.join(tool.cwd, "outputs");
+}
+
+function isAdminRequest(req) {
+  if (isOwner(req)) return true;
+  const headerPassword = String(req.headers["x-admin-password"] || "").trim();
+  return Boolean(ownerAccessPassword && headerPassword === ownerAccessPassword);
+}
+
+function clampInteger(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(number)));
+}
+
+function toPublicPath(filePath, rootPath) {
+  return path.relative(rootPath, filePath).split(path.sep).join("/");
+}
+
+async function collectImagesFromDir(rootPath, sinceMs, tool, seen) {
+  const images = [];
+  if (!existsSync(rootPath)) return images;
+  let entries = [];
+  try {
+    entries = await readdir(rootPath, { withFileTypes: true });
+  } catch {
+    return images;
+  }
+  for (const entry of entries) {
+    const fullPath = path.join(rootPath, entry.name);
+    if (entry.isDirectory()) {
+      images.push(...await collectImagesFromDir(fullPath, sinceMs, tool, seen));
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    if (!imageExtensions.has(path.extname(entry.name).toLowerCase())) continue;
+    const resolved = path.resolve(fullPath);
+    if (seen.has(resolved)) continue;
+    let fileStat;
+    try {
+      fileStat = await statFile(fullPath);
+    } catch {
+      continue;
+    }
+    if (fileStat.mtimeMs < sinceMs) continue;
+    seen.add(resolved);
+    const relativePath = toPublicPath(fullPath, rootPath);
+    images.push({
+      toolId: tool.id,
+      toolName: tool.name,
+      filename: path.basename(fullPath),
+      path: relativePath,
+      createdAt: fileStat.mtime.toISOString(),
+      size: fileStat.size,
+      downloadUrl: `/api/admin/generated-images/file?tool=${encodeURIComponent(tool.id)}&path=${encodeURIComponent(relativePath)}`
+    });
+  }
+  return images;
+}
+
+async function listGeneratedImages(days = 5) {
+  const lookbackDays = clampInteger(days, 1, 30, 5);
+  const sinceMs = Date.now() - lookbackDays * 24 * 60 * 60 * 1000;
+  const seen = new Set();
+  const images = [];
+  for (const tool of tools) {
+    images.push(...await collectImagesFromDir(toolOutputDir(tool), sinceMs, tool, seen));
+    images.push(...await collectImagesFromDir(legacyToolOutputDir(tool), sinceMs, tool, seen));
+  }
+  images.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return {
+    days: lookbackDays,
+    generatedOutputRoot,
+    images: images.slice(0, 1000)
+  };
+}
+
+function safeRelativePath(value) {
+  const text = String(value || "").replaceAll("/", path.sep);
+  if (!text || path.isAbsolute(text)) return "";
+  const normalized = path.normalize(text);
+  if (normalized === "." || normalized.startsWith("..") || path.isAbsolute(normalized)) return "";
+  return normalized;
+}
+
+async function findGeneratedImage(toolId, relativePath) {
+  const tool = tools.find((item) => item.id === toolId);
+  const safePath = safeRelativePath(relativePath);
+  if (!tool || !safePath) return null;
+  for (const rootPath of [toolOutputDir(tool), legacyToolOutputDir(tool)]) {
+    const resolvedRoot = path.resolve(rootPath);
+    const filePath = path.resolve(rootPath, safePath);
+    if (filePath !== resolvedRoot && !filePath.startsWith(`${resolvedRoot}${path.sep}`)) continue;
+    if (!imageExtensions.has(path.extname(filePath).toLowerCase())) continue;
+    if (existsSync(filePath)) return { tool, filePath };
+  }
+  return null;
 }
 
 function wait(ms) {
@@ -85,6 +192,8 @@ async function startTool(tool) {
   const existing = children.get(tool.id);
   if (existing && !existing.killed) return;
   if (await isToolListening(tool)) return;
+  const outputDir = toolOutputDir(tool);
+  if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
   const out = createWriteStream(path.join(logsDir, `${tool.id}.out.log`), { flags: "a" });
   const err = createWriteStream(path.join(logsDir, `${tool.id}.err.log`), { flags: "a" });
   const child = spawn(process.execPath, ["server.js"], {
@@ -94,7 +203,8 @@ async function startTool(tool) {
       COMBINED_WORKBENCH: "1",
       HOST: "127.0.0.1",
       PORT: String(tool.port),
-      DAILY_LIMIT: "999999"
+      DAILY_LIMIT: "999999",
+      OUTPUT_DIR: outputDir
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true
@@ -494,6 +604,39 @@ async function serveStatic(req, res) {
   }
 }
 
+async function handleAdminGeneratedImage(req, res, url) {
+  if (!isAdminRequest(req)) {
+    sendJson(res, 403, { error: "需要管理员密码查看公网生成图片。" });
+    return;
+  }
+  sendJson(res, 200, await listGeneratedImages(url.searchParams.get("days")));
+}
+
+async function handleAdminGeneratedImageFile(req, res, url) {
+  if (!isAdminRequest(req)) {
+    sendJson(res, 403, { error: "需要管理员密码下载公网生成图片。" }, req.method);
+    return;
+  }
+  const found = await findGeneratedImage(url.searchParams.get("tool"), url.searchParams.get("path"));
+  if (!found) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(req.method === "HEAD" ? "" : "Not found");
+    return;
+  }
+  const extension = path.extname(found.filePath).toLowerCase();
+  const contentType = mimeTypes[extension] || "application/octet-stream";
+  res.writeHead(200, {
+    "Content-Type": contentType,
+    "Cache-Control": "no-store",
+    "Content-Disposition": `attachment; filename="${encodeURIComponent(path.basename(found.filePath))}"`
+  });
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
+  createReadStream(found.filePath).pipe(res);
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -512,6 +655,14 @@ const server = http.createServer(async (req, res) => {
     }
     if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/healthz") {
       sendJson(res, 200, { ok: true }, req.method);
+      return;
+    }
+    if (req.method === "GET" && url.pathname === "/api/admin/generated-images") {
+      await handleAdminGeneratedImage(req, res, url);
+      return;
+    }
+    if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/api/admin/generated-images/file") {
+      await handleAdminGeneratedImageFile(req, res, url);
       return;
     }
     if (req.method === "POST" && url.pathname === "/api/unlock") {

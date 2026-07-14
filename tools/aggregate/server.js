@@ -11,7 +11,7 @@ dns.setDefaultResultOrder("ipv4first");
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const preferredPublicDir = path.join(__dirname, "public");
 const publicDir = existsSync(path.join(preferredPublicDir, "index.html")) ? preferredPublicDir : __dirname;
-const outputDir = path.join(__dirname, "outputs");
+const outputDir = path.resolve(process.env.OUTPUT_DIR || path.join(__dirname, "outputs"));
 const defaultRobotPath = path.join(publicDir, "assets", "robot-reference.png");
 const landscapeRobotPath = path.join(publicDir, "assets", "robot-reference-landscape.png");
 const defaultProductPath = path.join(publicDir, "assets", "product-example.png");

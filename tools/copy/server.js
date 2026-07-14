@@ -10,7 +10,7 @@ dns.setDefaultResultOrder("ipv4first");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "web");
-const outputDir = path.join(__dirname, "outputs");
+const outputDir = path.resolve(process.env.OUTPUT_DIR || path.join(__dirname, "outputs"));
 const port = Number(process.env.PORT || 4188);
 const maxBodyBytes = 48 * 1024 * 1024;
 const sessions = new Map();
