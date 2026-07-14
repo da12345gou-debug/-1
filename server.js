@@ -15,7 +15,11 @@ const logsDir = path.join(__dirname, "logs");
 const port = Number(process.env.PORT || 10000);
 const host = "0.0.0.0";
 const accessPassword = String(process.env.WORKBENCH_ACCESS_PASSWORD || "DUUE2026").trim();
+const ownerAccessPassword = String(process.env.WORKBENCH_OWNER_PASSWORD || "DUUE2026_OWNER").trim();
+const sharedDailyLimit = Number(process.env.SHARED_DAILY_LIMIT || 10);
+const sharedAggregateDailyLimit = Number(process.env.SHARED_AGGREGATE_DAILY_LIMIT || 5);
 const sessions = new Map();
+const usageByDate = new Map();
 
 if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
 
@@ -89,7 +93,8 @@ async function startTool(tool) {
       ...process.env,
       COMBINED_WORKBENCH: "1",
       HOST: "127.0.0.1",
-      PORT: String(tool.port)
+      PORT: String(tool.port),
+      DAILY_LIMIT: "999999"
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true
@@ -156,6 +161,74 @@ function isAuthorized(req) {
   return Boolean(sessionId && sessions.has(sessionId));
 }
 
+function isOwner(req) {
+  const sessionId = getSessionId(req);
+  return Boolean(sessionId && sessions.get(sessionId)?.owner);
+}
+
+function todayKey() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date());
+}
+
+function dailyUsage() {
+  const key = todayKey();
+  let usage = usageByDate.get(key);
+  if (!usage) {
+    usage = { total: 0, aggregate: 0 };
+    usageByDate.clear();
+    usageByDate.set(key, usage);
+  }
+  return usage;
+}
+
+function clamp(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return min;
+  return Math.max(min, Math.min(max, Math.ceil(number)));
+}
+
+function generationCost(tool, body) {
+  if (tool.id !== "landing") return 1;
+  if (Array.isArray(body?.prototypeSegmentRefs)) return clamp(body.prototypeSegmentRefs.length, 1, 10);
+  if (Array.isArray(body?.prototypeSegments)) return clamp(body.prototypeSegments.length, 1, 10);
+  return clamp(body?.segmentCount || 1, 1, 10);
+}
+
+function reserveSharedQuota(req, tool, body) {
+  if (isOwner(req)) return { ok: true, count: 0, reserved: false };
+  const count = generationCost(tool, body);
+  const usage = dailyUsage();
+  if (usage.total + count > sharedDailyLimit) {
+    return {
+      ok: false,
+      status: 429,
+      error: `今日共享生成额度已达上限（全工具共 ${sharedDailyLimit} 张）。`
+    };
+  }
+  if (tool.id === "aggregate" && usage.aggregate + count > sharedAggregateDailyLimit) {
+    return {
+      ok: false,
+      status: 429,
+      error: `今日聚合 KV 共享额度已达上限（${sharedAggregateDailyLimit} 张）。`
+    };
+  }
+  usage.total += count;
+  if (tool.id === "aggregate") usage.aggregate += count;
+  return { ok: true, count, reserved: true };
+}
+
+function releaseSharedQuota(req, tool, count) {
+  if (isOwner(req) || !count) return;
+  const usage = dailyUsage();
+  usage.total = Math.max(0, usage.total - count);
+  if (tool.id === "aggregate") usage.aggregate = Math.max(0, usage.aggregate - count);
+}
+
 function sendLocked(req, res) {
   const acceptsHtml = String(req.headers.accept || "").includes("text/html");
   if (req.method === "GET" && acceptsHtml) {
@@ -204,9 +277,30 @@ function getMountedTool(pathname) {
   return tools.find((tool) => pathname === tool.mountPath || pathname.startsWith(`${tool.mountPath}/`));
 }
 
-function rewriteToolText(text, tool) {
+function sanitizeAggregateClientScript(text, upstreamPath) {
+  if (path.basename(decodeURIComponent(upstreamPath.split("?")[0] || "")) !== "app.js") return text;
+  let sanitized = text;
+  const promptStart = sanitized.indexOf("function buildPortraitPrompt(fields) {");
+  const promptEnd = sanitized.indexOf("function updatePrompt() {");
+  if (promptStart !== -1 && promptEnd !== -1 && promptEnd > promptStart) {
+    sanitized = sanitized.slice(0, promptStart) + sanitized.slice(promptEnd);
+  }
+  sanitized = sanitized.replace(
+    /function updatePrompt\(\) \{\r?\n\s*const fields = getFields\(\);\r?\n\s*promptPreview\.value = buildPrompt\(fields\);\r?\n\s*resultFrame\?\.classList\.toggle\("is-landscape", fields\.layout === "landscape"\);\r?\n\s*resultFrame\?\.style\.setProperty\("--preview-ratio", ratioPreviews\[fields\.layout\]\?\.\[fields\.aspectRatio\] \|\| "3 \/ 4"\);\r?\n\}/,
+    `function updatePrompt() {
+  const fields = getFields();
+  resultFrame?.classList.toggle("is-landscape", fields.layout === "landscape");
+  resultFrame?.style.setProperty("--preview-ratio", ratioPreviews[fields.layout]?.[fields.aspectRatio] || "3 / 4");
+}`
+  );
+  sanitized = sanitized.replace(/\r?\n\s*promptPreview\.value = result\.prompt;/g, "");
+  return sanitized;
+}
+
+function rewriteToolText(text, tool, upstreamPath) {
+  const safeText = tool.id === "aggregate" ? sanitizeAggregateClientScript(text, upstreamPath) : text;
   const prefix = tool.mountPath;
-  return text
+  return safeText
     .replaceAll('"/api', `"${prefix}/api`)
     .replaceAll("'/api", `'${prefix}/api`)
     .replaceAll("`/api", "`" + prefix + "/api")
@@ -220,6 +314,15 @@ function rewriteToolText(text, tool) {
     .replaceAll('src="/app.js', `src="${prefix}/app.js`)
     .replaceAll('src="/portal.js"', `src="${prefix}/portal.js"`)
     .replaceAll('href="/LANDING_PAGE_TYPE_RULES.md"', `href="${prefix}/LANDING_PAGE_TYPE_RULES.md"`);
+}
+
+function isBlockedToolPath(upstreamPath) {
+  const pathname = decodeURIComponent(upstreamPath.split("?")[0] || "/");
+  const name = path.basename(pathname).toLowerCase();
+  if (!name) return false;
+  if (name.startsWith(".")) return true;
+  if (name === "server.js" || name === "package.json" || name.endsWith(".md") || name.endsWith(".map")) return true;
+  return false;
 }
 
 function copyProxyHeaders(sourceHeaders, contentType) {
@@ -244,12 +347,17 @@ function readRequestBuffer(req) {
 }
 
 async function proxyMountedTool(req, res, tool, pathname) {
+  let upstreamPath = pathname.slice(tool.mountPath.length) || "/";
+  if (upstreamPath === "/" && tool.path !== "/") upstreamPath = tool.path;
+  if ((req.method === "GET" || req.method === "HEAD") && isBlockedToolPath(upstreamPath)) {
+    res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+    res.end(req.method === "HEAD" ? "" : "Not found");
+    return;
+  }
   if (!(await ensureToolStarted(tool))) {
     sendJson(res, 503, { error: `${tool.name} 启动中，请稍后重试。` });
     return;
   }
-  let upstreamPath = pathname.slice(tool.mountPath.length) || "/";
-  if (upstreamPath === "/" && tool.path !== "/") upstreamPath = tool.path;
   const targetUrl = new URL(upstreamPath, `http://127.0.0.1:${tool.port}`);
   targetUrl.search = new URL(req.url, `http://${req.headers.host}`).search;
 
@@ -260,14 +368,32 @@ async function proxyMountedTool(req, res, tool, pathname) {
   headers.set("host", `127.0.0.1:${tool.port}`);
 
   const body = ["GET", "HEAD"].includes(req.method) ? undefined : await readRequestBuffer(req);
+  let quota = { ok: true, count: 0, reserved: false };
+  if (req.method === "POST" && upstreamPath === "/api/generate") {
+    let parsedBody = {};
+    try {
+      parsedBody = JSON.parse(body?.toString("utf8") || "{}");
+    } catch {
+      parsedBody = {};
+    }
+    quota = reserveSharedQuota(req, tool, parsedBody);
+    if (!quota.ok) {
+      sendJson(res, quota.status, { error: quota.error });
+      return;
+    }
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
   let upstream;
   try {
     upstream = await fetch(targetUrl, { method: req.method, headers, body, signal: controller.signal });
+  } catch (error) {
+    if (quota.reserved) releaseSharedQuota(req, tool, quota.count);
+    throw error;
   } finally {
     clearTimeout(timer);
   }
+  if (quota.reserved && !upstream.ok) releaseSharedQuota(req, tool, quota.count);
   const contentType = upstream.headers.get("content-type") || "";
 
   if (
@@ -276,7 +402,7 @@ async function proxyMountedTool(req, res, tool, pathname) {
     contentType.includes("text/css") ||
     contentType.includes("application/json")
   ) {
-    const text = rewriteToolText(await upstream.text(), tool);
+    const text = rewriteToolText(await upstream.text(), tool, upstreamPath);
     res.writeHead(upstream.status, copyProxyHeaders(upstream.headers, contentType));
     res.end(text);
     return;
@@ -291,17 +417,19 @@ async function handleUnlock(req, res) {
   try {
     if (!accessPassword) return sendJson(res, 200, { ok: true });
     const body = JSON.parse(await readRequestBuffer(req));
-    if (String(body.password || "") !== accessPassword) {
+    const password = String(body.password || "");
+    const owner = Boolean(ownerAccessPassword && password === ownerAccessPassword);
+    if (password !== accessPassword && !owner) {
       return sendJson(res, 401, { error: "访问密码不正确。" });
     }
     const sessionId = crypto.randomUUID();
-    sessions.set(sessionId, { createdAt: Date.now() });
+    sessions.set(sessionId, { createdAt: Date.now(), owner });
     res.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
       "Set-Cookie": `gtm_workbench_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
       "Cache-Control": "no-store"
     });
-    res.end(JSON.stringify({ ok: true }));
+    res.end(JSON.stringify({ ok: true, owner }));
   } catch (error) {
     sendJson(res, 500, { error: error.message || "解锁失败。" });
   }
@@ -316,14 +444,16 @@ async function handleFormUnlock(req, res) {
     }
 
     const body = new URLSearchParams((await readRequestBuffer(req)).toString("utf8"));
-    if (String(body.get("password") || "") !== accessPassword) {
+    const password = String(body.get("password") || "");
+    const owner = Boolean(ownerAccessPassword && password === ownerAccessPassword);
+    if (password !== accessPassword && !owner) {
       res.writeHead(303, { Location: "/?error=1", "Cache-Control": "no-store" });
       res.end();
       return;
     }
 
     const sessionId = crypto.randomUUID();
-    sessions.set(sessionId, { createdAt: Date.now() });
+    sessions.set(sessionId, { createdAt: Date.now(), owner });
     res.writeHead(303, {
       Location: "/#landing",
       "Set-Cookie": `gtm_workbench_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
@@ -377,7 +507,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     if (req.method === "GET" && url.pathname === "/api/auth-status") {
-      sendJson(res, 200, { locked: Boolean(accessPassword), authorized: isAuthorized(req) });
+      sendJson(res, 200, { locked: Boolean(accessPassword), authorized: isAuthorized(req), owner: isOwner(req) });
       return;
     }
     if ((req.method === "GET" || req.method === "HEAD") && url.pathname === "/healthz") {

@@ -309,7 +309,6 @@ async function runGenerate(body) {
       return {
         image: imageUrl,
         downloadUrl: imageUrl,
-        prompt,
         usage: result.usage || null,
         model
       };
@@ -330,7 +329,6 @@ async function runGenerate(body) {
     return {
       image: imageData,
       downloadUrl: `/outputs/${filename}`,
-      prompt,
       usage: result.usage || null,
       model
     };
@@ -353,7 +351,6 @@ async function runGenerate(body) {
   return {
     image: `data:image/${outputFormat};base64,${imageBase64}`,
     downloadUrl: `/outputs/${filename}`,
-    prompt,
     usage: result.usage || null,
     model
   };
