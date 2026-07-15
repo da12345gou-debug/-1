@@ -108,6 +108,12 @@ function setMessage(text, type = "") {
   message.className = `message ${type}`.trim();
 }
 
+function showQuotaLimitAlert(text) {
+  if (String(text || "").includes("今日总额度已用完，可联系管理员")) {
+    window.alert("今日总额度已用完，可联系管理员");
+  }
+}
+
 function toFriendlyError(messageText) {
   const text = String(messageText || "");
   if (/quota|余额|token quota|insufficient/i.test(text)) return "额度不足，请充值后再试。";
@@ -683,7 +689,9 @@ form.addEventListener("submit", async (event) => {
     stopGenerationTimer();
     setPreviewLoading(false);
     if (!resultList.children.length) resultList.append(emptyState);
-    setMessage(toFriendlyError(error.message), "error");
+    const errorText = toFriendlyError(error.message);
+    showQuotaLimitAlert(errorText);
+    setMessage(errorText, "error");
   } finally {
     stopGenerationTimer();
     setPreviewLoading(false);

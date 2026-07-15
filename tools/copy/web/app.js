@@ -67,6 +67,12 @@ function setMessage(text, type = "") {
   message.className = `message ${type}`.trim();
 }
 
+function showQuotaLimitAlert(text) {
+  if (String(text || "").includes("今日总额度已用完，可联系管理员")) {
+    window.alert("今日总额度已用完，可联系管理员");
+  }
+}
+
 function formatTime(totalSeconds) {
   const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
   const seconds = String(totalSeconds % 60).padStart(2, "0");
@@ -377,6 +383,7 @@ generateBtn.addEventListener("click", async () => {
   } catch (error) {
     stopCountdown();
     generateBtn.disabled = false;
+    showQuotaLimitAlert(error.message);
     setMessage(error.message, "error");
     resultPreview.innerHTML = emptyResultMarkup;
     clearResultRatio();

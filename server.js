@@ -17,7 +17,7 @@ const port = Number(process.env.PORT || 10000);
 const host = "0.0.0.0";
 const accessPassword = String(process.env.WORKBENCH_ACCESS_PASSWORD || "DUUE2026").trim();
 const ownerAccessPassword = String(process.env.WORKBENCH_OWNER_PASSWORD || "DUUE2026_OWNER").trim();
-const sharedDailyLimit = Number(process.env.SHARED_DAILY_LIMIT || 10);
+const sharedDailyLimit = Number(process.env.SHARED_DAILY_LIMIT || 20);
 const sharedAggregateDailyLimit = Number(process.env.SHARED_AGGREGATE_DAILY_LIMIT || 5);
 const sessions = new Map();
 const usageByDate = new Map();
@@ -317,7 +317,7 @@ function reserveSharedQuota(req, tool, body) {
     return {
       ok: false,
       status: 429,
-      error: `今日共享生成额度已达上限（全工具共 ${sharedDailyLimit} 张）。`
+      error: "今日总额度已用完，可联系管理员"
     };
   }
   if (tool.id === "aggregate" && usage.aggregate + count > sharedAggregateDailyLimit) {

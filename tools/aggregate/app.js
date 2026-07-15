@@ -155,6 +155,12 @@ function setMessage(text, type = "") {
   message.className = `message ${type}`.trim();
 }
 
+function showQuotaLimitAlert(text) {
+  if (String(text || "").includes("今日总额度已用完，可联系管理员")) {
+    window.alert("今日总额度已用完，可联系管理员");
+  }
+}
+
 function normalizeErrorMessage(text) {
   const messageText = String(text || "").trim();
   const lower = messageText.toLowerCase();
@@ -435,7 +441,9 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     stopStatusPolling();
     clearCountdown();
-    setMessage(normalizeErrorMessage(error.message), "error");
+    const errorText = normalizeErrorMessage(error.message);
+    showQuotaLimitAlert(errorText);
+    setMessage(errorText, "error");
     restoreButton();
   }
 });
@@ -445,7 +453,9 @@ document.addEventListener("visibilitychange", () => {
     checkJobStatus(activeJobId).catch((error) => {
       stopStatusPolling();
       clearCountdown();
-      setMessage(normalizeErrorMessage(error.message), "error");
+      const errorText = normalizeErrorMessage(error.message);
+      showQuotaLimitAlert(errorText);
+      setMessage(errorText, "error");
       restoreButton();
     });
   }
