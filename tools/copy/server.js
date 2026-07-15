@@ -142,7 +142,7 @@ function normalizeBaseUrl(value) {
 }
 
 function imageModel() {
-  return process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5";
+  return process.env.OPENAI_IMAGE_MODEL || "gpt-image-2-1K";
 }
 
 function imageQuality() {
