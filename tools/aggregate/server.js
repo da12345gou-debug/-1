@@ -262,7 +262,7 @@ async function runGenerate(body) {
   const apiKey = String(body.apiKey || process.env.OPENAI_API_KEY || "").trim();
   const apiBaseUrl = normalizeBaseUrl(body.apiBaseUrl);
   const prompt = buildPrompt(body.fields || {});
-  const model = body.model || process.env.OPENAI_IMAGE_MODEL || "gpt-image-2-1K";
+  const model = body.model || process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5";
   const layout = body.layout || body.fields?.layout || "portrait";
   const aspectRatio = body.aspectRatio || body.fields?.aspectRatio || defaultRatios[layout] || defaultRatios.portrait;
   const size = body.size || sizeForRatio(aspectRatio, layout);

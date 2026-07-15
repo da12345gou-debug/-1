@@ -489,7 +489,7 @@ async function runGenerateJob(body, onProgress = () => {}) {
 
   const apiBaseUrl = normalizeBaseUrl(body.apiBaseUrl);
   const rules = await readFile(rulesPath, "utf8");
-  const model = body.model || process.env.OPENAI_IMAGE_MODEL || "gpt-image-2-1K";
+  const model = body.model || process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5";
   const size = body.size || "1024x1536";
   const quality = body.quality || "medium";
   const outputFormat = body.outputFormat || "png";
