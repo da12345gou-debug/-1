@@ -19,8 +19,11 @@ const accessPassword = String(process.env.WORKBENCH_ACCESS_PASSWORD || "DUUE2026
 const ownerAccessPassword = String(process.env.WORKBENCH_OWNER_PASSWORD || "DUUE2026_OWNER").trim();
 const sharedDailyLimit = Number(process.env.SHARED_DAILY_LIMIT || 20);
 const sharedAggregateDailyLimit = Number(process.env.SHARED_AGGREGATE_DAILY_LIMIT || 5);
+const extendDailyLimit = Number(process.env.EXTEND_DAILY_LIMIT || 1);
 const sessions = new Map();
 const usageByDate = new Map();
+const extendUsageCookieName = "gtm_extend_daily";
+const workbenchUserCookieName = "gtm_workbench_user";
 
 if (!existsSync(logsDir)) mkdirSync(logsDir, { recursive: true });
 if (!existsSync(generatedOutputRoot)) mkdirSync(generatedOutputRoot, { recursive: true });
@@ -52,6 +55,15 @@ const tools = [
     path: "/",
     mountPath: "/tools/copy",
     cwd: path.join(__dirname, "tools", "copy")
+  },
+  {
+    id: "extend",
+    name: "GTM全渠道一键延展工具",
+    sourceUrl: "http://127.0.0.1:5198/",
+    port: Number(process.env.EXTEND_COPY_PORT || 5198),
+    path: "/",
+    mountPath: "/tools/extend",
+    cwd: path.join(__dirname, "tools", "extend")
   }
 ];
 
@@ -261,6 +273,20 @@ function parseCookies(req) {
   );
 }
 
+function validUserId(value) {
+  return /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(String(value || "")) ? String(value) : "";
+}
+
+function workbenchUserId(req) {
+  const cookieUserId = validUserId(parseCookies(req)[workbenchUserCookieName]);
+  if (cookieUserId) return cookieUserId;
+  const session = sessions.get(getSessionId(req));
+  if (session?.userId) return session.userId;
+  const userId = crypto.randomUUID();
+  if (session) session.userId = userId;
+  return userId;
+}
+
 function getSessionId(req) {
   return parseCookies(req).gtm_workbench_session || "";
 }
@@ -289,11 +315,81 @@ function dailyUsage() {
   const key = todayKey();
   let usage = usageByDate.get(key);
   if (!usage) {
-    usage = { total: 0, aggregate: 0 };
+    usage = { total: 0, aggregate: 0, extendRunsByUser: new Map() };
     usageByDate.clear();
     usageByDate.set(key, usage);
   }
   return usage;
+}
+
+function extendUsageSignature(userId, date, runId) {
+  const secret = ownerAccessPassword || accessPassword || "gtm-workbench-extend";
+  return crypto
+    .createHmac("sha256", secret)
+    .update(`${userId}\n${date}\n${runId}`)
+    .digest("base64url");
+}
+
+function readExtendUsageCookie(req, userId) {
+  const value = String(parseCookies(req)[extendUsageCookieName] || "");
+  const separator = value.lastIndexOf(".");
+  if (separator <= 0) return "";
+  try {
+    const payload = JSON.parse(Buffer.from(value.slice(0, separator), "base64url").toString("utf8"));
+    const signature = value.slice(separator + 1);
+    if (payload.date !== todayKey() || !payload.runId) return "";
+    const expected = extendUsageSignature(userId, payload.date, payload.runId);
+    const actualBytes = Buffer.from(signature);
+    const expectedBytes = Buffer.from(expected);
+    if (actualBytes.length !== expectedBytes.length || !crypto.timingSafeEqual(actualBytes, expectedBytes)) return "";
+    return String(payload.runId);
+  } catch {
+    return "";
+  }
+}
+
+function extendUsageCookie(userId, runId) {
+  const date = todayKey();
+  const payload = Buffer.from(JSON.stringify({ date, runId }), "utf8").toString("base64url");
+  const signature = extendUsageSignature(userId, date, runId);
+  return `${extendUsageCookieName}=${payload}.${signature}; HttpOnly; SameSite=Lax; Path=/; Max-Age=172800`;
+}
+
+function reserveExtendRun(req, body) {
+  if (isOwner(req)) return { ok: true, count: 0, reserved: false, type: "extend" };
+  const runId = String(body?.runId || "").trim();
+  if (!runId || runId.length > 160) {
+    return { ok: false, status: 400, error: "生成任务标识缺失，请刷新页面后重试。" };
+  }
+
+  const userId = workbenchUserId(req);
+  const cookieRunId = readExtendUsageCookie(req, userId);
+  if (cookieRunId && cookieRunId !== runId) {
+    return { ok: false, status: 429, error: "当日生成数量已达上限" };
+  }
+
+  const usage = dailyUsage();
+  if (!usage.extendRunsByUser) usage.extendRunsByUser = new Map();
+  let runs = usage.extendRunsByUser.get(userId);
+  if (!runs) {
+    runs = new Set();
+    usage.extendRunsByUser.set(userId, runs);
+  }
+  if (runs.has(runId) || cookieRunId === runId) {
+    runs.add(runId);
+    return { ok: true, count: 0, reserved: false, type: "extend" };
+  }
+  if (runs.size >= extendDailyLimit) {
+    return { ok: false, status: 429, error: "当日生成数量已达上限" };
+  }
+  runs.add(runId);
+  return {
+    ok: true,
+    count: 1,
+    reserved: true,
+    type: "extend",
+    setCookie: extendUsageCookie(userId, runId)
+  };
 }
 
 function clamp(value, min, max) {
@@ -310,7 +406,7 @@ function generationCost(tool, body) {
 }
 
 function reserveSharedQuota(req, tool, body) {
-  if (isOwner(req)) return { ok: true, count: 0, reserved: false };
+  if (isOwner(req)) return { ok: true, count: 0, reserved: false, type: "shared" };
   const count = generationCost(tool, body);
   const usage = dailyUsage();
   if (usage.total + count > sharedDailyLimit) {
@@ -329,7 +425,7 @@ function reserveSharedQuota(req, tool, body) {
   }
   usage.total += count;
   if (tool.id === "aggregate") usage.aggregate += count;
-  return { ok: true, count, reserved: true };
+  return { ok: true, count, reserved: true, type: "shared" };
 }
 
 function releaseSharedQuota(req, tool, count) {
@@ -475,17 +571,31 @@ async function proxyMountedTool(req, res, tool, pathname) {
   headers.delete("host");
   headers.delete("connection");
   headers.delete("content-length");
+  headers.delete("expect");
   headers.set("host", `127.0.0.1:${tool.port}`);
 
-  const body = ["GET", "HEAD"].includes(req.method) ? undefined : await readRequestBuffer(req);
-  let quota = { ok: true, count: 0, reserved: false };
-  if (req.method === "POST" && upstreamPath === "/api/generate") {
-    let parsedBody = {};
+  let body = ["GET", "HEAD"].includes(req.method) ? undefined : await readRequestBuffer(req);
+  let quota = { ok: true, count: 0, reserved: false, type: "none" };
+  let parsedBody = null;
+  if (req.method === "POST" && ["/api/generate", "/api/extend-image"].includes(upstreamPath)) {
     try {
       parsedBody = JSON.parse(body?.toString("utf8") || "{}");
     } catch {
       parsedBody = {};
     }
+  }
+  if (req.method === "POST" && tool.id === "extend" && upstreamPath === "/api/extend-image") {
+    quota = reserveExtendRun(req, parsedBody);
+    if (!quota.ok) {
+      sendJson(res, quota.status, { error: quota.error });
+      return;
+    }
+    const mountedOutputPrefix = `${tool.mountPath}/outputs/`;
+    if (String(parsedBody?.sourceUrl || "").startsWith(mountedOutputPrefix)) {
+      parsedBody.sourceUrl = String(parsedBody.sourceUrl).slice(tool.mountPath.length);
+      body = Buffer.from(JSON.stringify(parsedBody), "utf8");
+    }
+  } else if (req.method === "POST" && upstreamPath === "/api/generate") {
     quota = reserveSharedQuota(req, tool, parsedBody);
     if (!quota.ok) {
       sendJson(res, quota.status, { error: quota.error });
@@ -493,17 +603,18 @@ async function proxyMountedTool(req, res, tool, pathname) {
     }
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
+  const timeoutMs = tool.id === "extend" && upstreamPath === "/api/extend-image" ? 5 * 60 * 1000 : 30000;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let upstream;
   try {
     upstream = await fetch(targetUrl, { method: req.method, headers, body, signal: controller.signal });
   } catch (error) {
-    if (quota.reserved) releaseSharedQuota(req, tool, quota.count);
+    if (quota.type === "shared" && quota.reserved) releaseSharedQuota(req, tool, quota.count);
     throw error;
   } finally {
     clearTimeout(timer);
   }
-  if (quota.reserved && !upstream.ok) releaseSharedQuota(req, tool, quota.count);
+  if (quota.type === "shared" && quota.reserved && !upstream.ok) releaseSharedQuota(req, tool, quota.count);
   const contentType = upstream.headers.get("content-type") || "";
 
   if (
@@ -513,13 +624,17 @@ async function proxyMountedTool(req, res, tool, pathname) {
     contentType.includes("application/json")
   ) {
     const text = rewriteToolText(await upstream.text(), tool, upstreamPath);
-    res.writeHead(upstream.status, copyProxyHeaders(upstream.headers, contentType));
+    const responseHeaders = copyProxyHeaders(upstream.headers, contentType);
+    if (quota.setCookie) responseHeaders["set-cookie"] = quota.setCookie;
+    res.writeHead(upstream.status, responseHeaders);
     res.end(text);
     return;
   }
 
   const bytes = Buffer.from(await upstream.arrayBuffer());
-  res.writeHead(upstream.status, copyProxyHeaders(upstream.headers, contentType));
+  const responseHeaders = copyProxyHeaders(upstream.headers, contentType);
+  if (quota.setCookie) responseHeaders["set-cookie"] = quota.setCookie;
+  res.writeHead(upstream.status, responseHeaders);
   res.end(bytes);
 }
 
@@ -533,10 +648,14 @@ async function handleUnlock(req, res) {
       return sendJson(res, 401, { error: "访问密码不正确。" });
     }
     const sessionId = crypto.randomUUID();
-    sessions.set(sessionId, { createdAt: Date.now(), owner });
+    const userId = validUserId(parseCookies(req)[workbenchUserCookieName]) || crypto.randomUUID();
+    sessions.set(sessionId, { createdAt: Date.now(), owner, userId });
     res.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
-      "Set-Cookie": `gtm_workbench_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+      "Set-Cookie": [
+        `gtm_workbench_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+        `${workbenchUserCookieName}=${userId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000`
+      ],
       "Cache-Control": "no-store"
     });
     res.end(JSON.stringify({ ok: true, owner }));
@@ -563,10 +682,14 @@ async function handleFormUnlock(req, res) {
     }
 
     const sessionId = crypto.randomUUID();
-    sessions.set(sessionId, { createdAt: Date.now(), owner });
+    const userId = validUserId(parseCookies(req)[workbenchUserCookieName]) || crypto.randomUUID();
+    sessions.set(sessionId, { createdAt: Date.now(), owner, userId });
     res.writeHead(303, {
       Location: "/#landing",
-      "Set-Cookie": `gtm_workbench_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+      "Set-Cookie": [
+        `gtm_workbench_session=${sessionId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=86400`,
+        `${workbenchUserCookieName}=${userId}; HttpOnly; SameSite=Lax; Path=/; Max-Age=31536000`
+      ],
       "Cache-Control": "no-store"
     });
     res.end();

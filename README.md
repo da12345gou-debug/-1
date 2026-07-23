@@ -1,20 +1,26 @@
 # GTM运营工作台1.0版本
 
-这是三个复制版工具组合后的公网部署版本，用来替换原“落地页一键延展傻瓜工具”的部署仓库。
+公网部署版包含四个独立工具：
 
-旧版保留点：
-- Git 分支：`old-landing-tool-before-gtm-workbench-20260707`
-- Git 标签：`old-landing-tool-before-gtm-workbench-20260707`
-- 本地备份：`C:\Users\panyan05\Documents\落地页一键延展傻瓜工具\_backups\old-landing-tool-before-gtm-workbench-20260707`
+- 产品海报一键生成
+- DEMO一键生成
+- 落地页延展
+- GTM全渠道一键延展工具
+
+第四个工具通过 `GPT-image-2` 图片编辑 API 生成天猫、京东、小度商城、私域及自定义尺寸物料。普通用户每天最多发起一次完整延展任务；同一任务中的中间图和多个尺寸不重复计数。使用管理员密码登录不受该限制。
 
 运行：
+
 ```bash
 npm start
 ```
 
-公网环境变量：
-- `ACCESS_PASSWORD`
+主要环境变量：
+
+- `WORKBENCH_ACCESS_PASSWORD`
+- `WORKBENCH_OWNER_PASSWORD`
 - `OPENAI_API_KEY`
 - `OPENAI_BASE_URL`
 - `OPENAI_IMAGE_MODEL`
-- `DAILY_LIMIT`
+- `EXTEND_DAILY_LIMIT`，默认 `1`
+- `GENERATED_OUTPUT_ROOT`

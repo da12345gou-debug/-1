@@ -16,6 +16,12 @@ const tools = {
     kind: "Demo Copy",
     desc: "你可以用它替换产品和融合参考图。",
     copiedUrl: "/tools/copy/"
+  },
+  extend: {
+    title: "GTM全渠道一键延展工具",
+    kind: "Channel Extension",
+    desc: "天猫、京东、小度商城、私域 及自定义尺寸",
+    copiedUrl: "/tools/extend/"
   }
 };
 

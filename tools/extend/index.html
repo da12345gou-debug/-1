@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GTM全渠道一键延展工具</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="embedded-tool">
+    <main class="shell">
+      <aside class="sidebar" aria-label="本地测试导航">
+        <section class="brand">
+          <p class="eyebrow">GTM Workspace</p>
+          <h1>GTM本地工具测试台</h1>
+          <p>独立沙盒，只验证新增分支的流程、任务包和结果回写结构。</p>
+        </section>
+
+        <nav class="tool-nav" aria-label="分支状态">
+          <button class="tool-card ghost" type="button" disabled>
+            <span>产品海报一键生成</span>
+            <small>现有工具，不参与本地测试</small>
+          </button>
+          <button class="tool-card ghost" type="button" disabled>
+            <span>DEMO一键生成</span>
+            <small>现有工具，不参与本地测试</small>
+          </button>
+          <button class="tool-card ghost" type="button" disabled>
+            <span>落地页延展</span>
+            <small>现有第三分支，保留不覆盖</small>
+          </button>
+          <button class="tool-card active" type="button" data-tool="extend">
+            <span>一键尺寸延展</span>
+            <small>天猫、京东、小度商城、私域 及自定义尺寸</small>
+            <i class="test-badge">测试中</i>
+          </button>
+          <button class="tool-card" type="button" data-tool="audit">
+            <span>物料批量审核</span>
+            <small>新增第五分支，按规则评分并标注问题</small>
+            <i class="test-badge">新增</i>
+          </button>
+        </nav>
+
+        <section class="sandbox-note">
+          <strong>隔离说明</strong>
+          <span>当前页面不调用 GTM 工作台、不调用 KV 工具、不写入原项目入口。</span>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="workspace-head">
+          <div>
+            <p class="eyebrow" id="workspaceEyebrow">Local Flow Lab</p>
+            <h2 id="workspaceTitle">GTM全渠道一键延展工具</h2>
+            <p id="workspaceDesc">上传 KV，勾选需要产出的尺寸后开始生成。</p>
+          </div>
+        </header>
+
+        <div class="workbench-grid" id="extendWorkbench">
+          <section class="panel input-panel" aria-labelledby="sourceTitle">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">输入素材</p>
+                <h3 id="sourceTitle">KV原图</h3>
+              </div>
+              <span class="status-pill" id="sourceStatus">未上传</span>
+            </div>
+
+            <label class="upload-box" for="sourceImage">
+              <input id="sourceImage" type="file" accept="image/png,image/jpeg,image/webp" />
+              <span class="upload-main">选择或拖入图片</span>
+              <span class="upload-sub">拖入竖版或方形的主KV</span>
+              <img id="sourcePreview" alt="图 1 预览" hidden />
+            </label>
+
+          </section>
+
+          <section class="panel selection-panel" aria-labelledby="sizeTitle">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">目标尺寸</p>
+                <h3 id="sizeTitle">勾选需要产出的图</h3>
+              </div>
+              <div class="size-head-actions">
+                <span class="status-pill" id="extendCount">目前延展 0 张</span>
+              </div>
+            </div>
+
+            <div class="size-group">
+              <div class="size-list" id="directSizeList"></div>
+            </div>
+
+            <div class="size-group">
+              <div class="size-list" id="wideSizeList"></div>
+            </div>
+
+            <div class="size-group custom-group">
+              <div class="group-title">
+                <h4>自定义尺寸</h4>
+              </div>
+              <div class="custom-list" id="customList"></div>
+            </div>
+          </section>
+
+          <section class="panel output-panel" aria-labelledby="flowTitle">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">结果预览</p>
+                <h3 id="flowTitle">延展出图结果</h3>
+              </div>
+              <div class="output-head-actions">
+                <button class="primary-button production-button" id="startProduction" type="button" disabled>开始生成</button>
+                <button class="secondary-button download-button" id="downloadResults" type="button" disabled>下载全部</button>
+              </div>
+            </div>
+
+            <div class="right-preview-stage" id="rightPreviewStage">
+              <div class="result-gallery" id="resultGallery"></div>
+            </div>
+
+            <ol class="timeline is-hidden" id="timeline" hidden></ol>
+            <div class="prompt-list is-hidden" id="promptList" hidden></div>
+          </section>
+        </div>
+
+        <div class="workbench-grid audit-workbench is-hidden" id="auditWorkbench">
+          <section class="panel input-panel" aria-labelledby="auditSourceTitle">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">待审素材</p>
+                <h3 id="auditSourceTitle">批量图片</h3>
+              </div>
+              <span class="status-pill" id="auditSourceStatus">未上传</span>
+            </div>
+
+            <label class="upload-box audit-upload-box" for="auditImageInput">
+              <input id="auditImageInput" type="file" accept="image/png,image/jpeg,image/webp" multiple />
+              <span class="upload-main">选择或拖入图片</span>
+              <span class="upload-sub">支持一张长图内含多张物料，或一次拖入多张图</span>
+            </label>
+
+            <div class="audit-queue" id="auditQueue"></div>
+          </section>
+
+          <section class="panel selection-panel" aria-labelledby="auditRuleTitle">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">审核规则</p>
+                <h3 id="auditRuleTitle">选择物料类型</h3>
+              </div>
+              <span class="status-pill" id="auditCount">待审 0 张</span>
+            </div>
+
+            <div class="audit-rule-list" id="auditRuleList"></div>
+
+            <div class="audit-option-block">
+              <label class="audit-toggle">
+                <input id="auditSplitMode" type="checkbox" checked />
+                <span>
+                  <strong>单张大图自动拆分</strong>
+                  <small>如果一张图里有多张物料，Codex 按视觉分布从左到右、从上到下逐一编号。</small>
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel output-panel" aria-labelledby="auditResultTitle">
+            <div class="panel-head">
+              <div>
+                <p class="section-label">审核结果</p>
+                <h3 id="auditResultTitle">物料评分与问题标注</h3>
+              </div>
+              <div class="output-head-actions">
+                <button class="primary-button production-button" id="startAudit" type="button" disabled>开始审核</button>
+                <button class="secondary-button download-button" id="downloadAudit" type="button" disabled>下载报告</button>
+              </div>
+            </div>
+
+            <div class="right-preview-stage audit-preview-stage">
+              <div class="audit-result-list" id="auditResultList"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="limit-dialog" id="dailyLimitDialog" aria-labelledby="dailyLimitTitle">
+      <div class="limit-dialog-body">
+        <h3 id="dailyLimitTitle">当日生成数量已达上限</h3>
+        <button class="primary-button" id="closeDailyLimitDialog" type="button">知道了</button>
+      </div>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
