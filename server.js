@@ -19,6 +19,8 @@ const accessPassword = String(process.env.WORKBENCH_ACCESS_PASSWORD || "DUUE2026
 const ownerAccessPassword = String(process.env.WORKBENCH_OWNER_PASSWORD || "DUUE2026_OWNER").trim();
 const sharedDailyLimit = Number(process.env.SHARED_DAILY_LIMIT || 20);
 const sharedAggregateDailyLimit = Number(process.env.SHARED_AGGREGATE_DAILY_LIMIT || 5);
+const temporaryAggregateLimitDate = "2026-08-07";
+const temporaryAggregateDailyLimit = 20;
 const extendDailyLimit = Number(process.env.EXTEND_DAILY_LIMIT || 1);
 const sessions = new Map();
 const usageByDate = new Map();
@@ -311,6 +313,12 @@ function todayKey() {
   }).format(new Date());
 }
 
+function currentAggregateDailyLimit() {
+  return todayKey() === temporaryAggregateLimitDate
+    ? temporaryAggregateDailyLimit
+    : sharedAggregateDailyLimit;
+}
+
 function dailyUsage() {
   const key = todayKey();
   let usage = usageByDate.get(key);
@@ -416,11 +424,12 @@ function reserveSharedQuota(req, tool, body) {
       error: "今日总额度已用完，可联系管理员"
     };
   }
-  if (tool.id === "aggregate" && usage.aggregate + count > sharedAggregateDailyLimit) {
+  const aggregateDailyLimit = currentAggregateDailyLimit();
+  if (tool.id === "aggregate" && usage.aggregate + count > aggregateDailyLimit) {
     return {
       ok: false,
       status: 429,
-      error: `今日聚合 KV 共享额度已达上限（${sharedAggregateDailyLimit} 张）。`
+      error: `今日聚合 KV 共享额度已达上限（${aggregateDailyLimit} 张）。`
     };
   }
   usage.total += count;
